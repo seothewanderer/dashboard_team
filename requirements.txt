@@ -1,0 +1,8 @@
+# 직접 사용하는 패키지 (Python 3.12.10, main/.venv). 전체 고정 목록은 requirements-lock.txt
+streamlit==1.64.0
+plotly==6.9.0
+streamlit-echarts==0.7.0
+streamlit-aggrid==1.2.1.post2
+pandas==2.3.3
+pyarrow==25.0.1
+pytest==9.1.1

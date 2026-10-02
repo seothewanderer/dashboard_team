@@ -1,0 +1,72 @@
+# 값의 출처: design/DESIGN.md (Green Deck, 2026-09-30) §3 폰트, §4 색, §11.1 테마.
+# config.toml은 var()를 쓸 수 없어 값을 반복한다. 코드의 단일 원천은 core/theme.py.
+
+[server]
+enableStaticServing = true
+
+[client]
+toolbarMode = "minimal"
+
+[theme]
+font = "Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Malgun Gothic', Arial, Helvetica, sans-serif"
+headingFont = "Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Malgun Gothic', Arial, Helvetica, sans-serif"
+baseRadius = "4px"
+buttonRadius = "full"
+baseFontSize = 14
+headingFontWeights = [800, 700, 700, 700, 700, 700]
+headingFontSizes = ["64px", "32px", "24px", "16px", "14px", "12px"]
+
+[[theme.fontFaces]]
+family = "Pretendard"
+url = "app/static/fonts/Pretendard-Regular.otf"
+weight = 400
+[[theme.fontFaces]]
+family = "Pretendard"
+url = "app/static/fonts/Pretendard-Medium.otf"
+weight = 500
+[[theme.fontFaces]]
+family = "Pretendard"
+url = "app/static/fonts/Pretendard-SemiBold.otf"
+weight = 600
+[[theme.fontFaces]]
+family = "Pretendard"
+url = "app/static/fonts/Pretendard-Bold.otf"
+weight = 700
+[[theme.fontFaces]]
+family = "Pretendard"
+url = "app/static/fonts/Pretendard-ExtraBold.otf"
+weight = 800
+
+[theme.dark]
+primaryColor = "#1DB954"
+backgroundColor = "#121212"
+secondaryBackgroundColor = "#282828"
+textColor = "#FFFFFF"
+linkColor = "#1DB954"
+borderColor = "#282828"
+showWidgetBorder = false
+chartCategoricalColors = ["#1DB954", "#53E076", "#2C5636", "#535353", "#A7A7A7", "#B3B3B3"]
+
+[theme.dark.sidebar]
+backgroundColor = "#181818"
+secondaryBackgroundColor = "#282828"
+textColor = "#B3B3B3"
+linkColor = "#1DB954"
+borderColor = "#282828"
+
+[theme.light]
+primaryColor = "#0A873A"
+backgroundColor = "#F9F6F5"
+secondaryBackgroundColor = "#F3F4F5"
+textColor = "#121212"
+linkColor = "#0A873A"
+borderColor = "#E5E2E1"
+showWidgetBorder = false
+chartCategoricalColors = ["#0A873A", "#C2DAC9", "#6B6B6B", "#D1D1D1", "#3A3A3A", "#E0EDE2"]
+
+[theme.light.sidebar]
+backgroundColor = "#F3F0EF"
+secondaryBackgroundColor = "#FFFFFF"
+textColor = "#3A3A3A"
+linkColor = "#0A873A"
+borderColor = "#E5E2E1"

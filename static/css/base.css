@@ -1,0 +1,444 @@
+/* 레이아웃·셸·컴포넌트 스타일 — design/DESIGN.md (Green Deck, 2026-09-30).
+   값은 core/theme.py가 :root에 주입한 var(--…)만 쓴다. Streamlit 내부 DOM 선택자는 이 파일에만 둔다
+   (버전 업그레이드 시 점검 대상). 미디어 쿼리의 폭 기준만 CSS 제약상 숫자로 둔다. */
+
+/* ================= 기본 ================= */
+html, body { font-family: var(--font-sans); -webkit-font-smoothing: antialiased; word-break: keep-all; }
+.stApp { background: var(--bg); color: var(--text-3); }
+a { color: var(--primary); text-decoration: none; }
+a:hover { text-decoration: underline; }
+[data-testid="stCaptionContainer"], .stCaption { font: var(--font-caption); color: var(--text-2); }
+header[data-testid="stHeader"] { background: transparent; }
+/* 글꼴 1.2배 (요청 E1): Streamlit 기본 위젯 글자도 본문·팝업에서 키운다. 사이드바·카드는 --native-text가 원래 크기 */
+:is([data-testid="stMain"], div[role="dialog"]) :is([data-testid="stButtonGroup"] button p, [data-testid="stWidgetLabel"] p,
+  [data-testid="stExpander"] summary p, .stButton > button p, .stLinkButton > a p, [data-testid="stAlert"] p,
+  [data-testid="stMarkdownContainer"] > p, [data-testid="stTextInput"] input, [data-baseweb="select"] div) { font-size: var(--native-text); }
+.st-key-roadmap-panel { --native-text: var(--type-caption-size); }   /* 탐색 경로의 작은 버튼은 캡션 크기 유지 */
+
+/* ================= 본문 폭 (DESIGN §6.2·§6.4) ================= */
+.block-container { max-width: var(--container-max); padding: var(--space-md) var(--page-margin) var(--space-3xl); }
+
+/* ================= 버튼 (DESIGN §7): 호버 1.04배 + 밝은 녹색 ================= */
+.stButton > button, .stLinkButton > a, .stDownloadButton > button {
+  font: var(--font-button); letter-spacing: var(--type-button-ls); min-height: var(--button-h);
+  transition: transform var(--duration-fast) var(--ease-standard), background var(--duration-fast) var(--ease-standard),
+              color var(--duration-fast) var(--ease-standard), border-color var(--duration-fast) var(--ease-standard); }
+.stButton > button:hover, .stLinkButton > a:hover { transform: scale(var(--hover-scale)); }
+/* 진한 녹색 = 그라데이션 (요청 E6, DESIGN §7): 135° 진함 → 밝음, 글자 대비 4.5:1 이상 */
+.stButton > button[kind="primary"] { background: linear-gradient(135deg, var(--grad-start), var(--grad-end)); color: var(--on-primary);
+  border: none; padding: 0 var(--button-pad-x); }
+.stButton > button[kind="primary"]:hover { background: linear-gradient(135deg, var(--grad-hover-start), var(--grad-hover-end));
+  color: var(--on-primary); }
+.stButton > button[kind="primary"] p { color: var(--on-primary); }
+.stButton > button[kind="secondary"] { background: transparent; color: var(--text); border: var(--border-w) solid var(--outline); }
+.stButton > button[kind="secondary"]:hover { border-color: var(--text); color: var(--text); background: var(--surface-2); }
+.stButton > button[kind="tertiary"] { color: var(--text-3); }
+.stButton > button[kind="tertiary"]:hover { color: var(--text); }
+
+/* ================= 입력·칩 (DESIGN §7) ================= */
+[data-testid="stTextInput"] input, [data-baseweb="select"] > div { background: var(--surface-2) !important; border-color: transparent !important;
+  border-radius: var(--radius-sm) !important; }
+[data-testid="stTextInput"] input:focus { border: var(--focus-w) solid var(--text) !important; }
+[data-testid="stButtonGroup"] button { background: var(--surface-2); color: var(--text); border: none; border-radius: var(--radius-full);
+  font: var(--font-body); transition: background var(--duration-fast) var(--ease-standard), transform var(--duration-fast) var(--ease-standard); }
+[data-testid="stButtonGroup"] button:hover { background: var(--control); transform: scale(var(--hover-scale)); }
+[data-testid="stButtonGroup"] button[aria-checked="true"], [data-testid="stButtonGroup"] button[kind$="Active"] {
+  background: var(--select-bg) !important; color: var(--select-fg) !important; }
+[data-testid="stButtonGroup"] button[aria-checked="true"] p { color: var(--select-fg) !important; }
+[data-testid="stExpander"] details { background: var(--surface); border: none; border-radius: var(--radius-md); }
+[data-testid="stExpander"] summary:hover { background: var(--surface-2); }
+
+/* ================= 사이드바: 240px, 슬라이드 (DESIGN §6.4·§10, 요청 B1·B3) ================= */
+section[data-testid="stSidebar"] { width: var(--sidebar-w) !important; min-width: var(--sidebar-w) !important;
+  max-width: var(--sidebar-w) !important; background: var(--sidebar-bg);
+  transition: transform var(--duration-slide) var(--ease-standard) !important; }   /* 폭은 고정, 위치만 슬라이드 */
+section[data-testid="stSidebar"] [data-testid="stSidebarContent"] { display: flex; flex-direction: column; background: var(--sidebar-bg); }
+section[data-testid="stSidebar"] [data-testid="stSidebarUserContent"] { padding: var(--space-md) var(--space-sm) !important; flex: 1;
+  display: flex; flex-direction: column; }
+section[data-testid="stSidebar"] [data-testid="stSidebarUserContent"] > div { flex: 1; display: flex; flex-direction: column; }
+[data-testid="stLayoutWrapper"]:has(> .st-key-sidebar-bottom) { margin-top: auto; }
+.st-key-sidebar-bottom { gap: var(--space-sm); }
+
+/* 서비스명: 메뉴보다 크게 + 녹색 점 + 아래 구분선 (요청 D1) */
+.sidebar-brand { font: var(--font-brand); letter-spacing: var(--type-brand-ls); color: var(--text); white-space: nowrap;
+  margin: 0 0 var(--space-md); padding: 0 var(--space-sm) var(--space-md); border-bottom: var(--border-w) solid var(--border);
+  display: flex; align-items: center; gap: var(--space-xs); }
+.sidebar-brand__dot { width: var(--space-sm); height: var(--space-sm); flex: none; border-radius: var(--radius-full); background: var(--primary);
+  box-shadow: 0 0 0 var(--space-xxs) var(--accent-soft); }
+
+.st-key-nav { gap: var(--space-xxs); }
+/* 홈~04 모두 같은 높이·여백 (page_link와 button의 기본 크기 차이 제거) */
+.st-key-nav .stElementContainer, .st-key-nav [data-testid="stPageLink"], .st-key-nav .stButton { margin: 0 !important; width: 100%; }
+.st-key-nav a, .st-key-nav button { font: var(--font-nav); color: var(--text-3); border-radius: var(--radius-md);
+  padding: 0 var(--space-sm) !important; justify-content: flex-start; height: var(--nav-item-h); min-height: var(--nav-item-h) !important;
+  display: flex; align-items: center; gap: 0; border: none; background: transparent; line-height: var(--type-nav-lh);
+  transition: background var(--duration-fast) var(--ease-standard), color var(--duration-fast) var(--ease-standard),
+              box-shadow var(--duration-fast) var(--ease-standard); }
+.st-key-nav button:hover { transform: none; }
+.st-key-nav a:hover, .st-key-nav button:hover { background: var(--surface-2); color: var(--text); text-decoration: none; }
+.st-key-nav a *:not([data-testid="stIconMaterial"]), .st-key-nav button *:not([data-testid="stIconMaterial"]) { color: inherit; font: inherit; }
+.st-key-nav [data-testid="stIconMaterial"] { color: inherit; }
+.st-key-nav button > div { justify-content: flex-start; width: 100%; }
+.st-key-nav button [data-testid="stMarkdownContainer"] p, .st-key-nav a p { text-align: left; white-space: nowrap; }
+.st-key-nav button [data-testid="stIconMaterial"] { margin-left: auto; }
+[class*="st-key-nav-item-active"] a, [class*="st-key-nav-sub-active"] button {
+  color: var(--text); background: var(--accent-soft); box-shadow: inset var(--indicator-w) 0 0 var(--primary); }
+/* 아이콘 칸(고정 폭): 이름 시작 위치를 맞춘다 (요청 D2·D3). 01~04 번호 → 물음표·돋보기·책·사람 아이콘(요청 P7) */
+.st-key-nav a::before, [class*="st-key-nav-parent"] button::before { content: ""; flex: none; width: var(--nav-icon); height: var(--nav-icon);
+  margin-right: calc(var(--nav-no-w) - var(--nav-icon)); background: currentColor;
+  -webkit-mask: var(--ico-rest) left center / contain no-repeat; mask: var(--ico-rest) left center / contain no-repeat; }
+.st-key-nav a:hover::before, [class*="st-key-nav-parent"] button:hover::before { -webkit-mask-image: var(--ico-hover); mask-image: var(--ico-hover); }
+[class*="st-key-nav-item"][class*="-home"] { --ico-rest: var(--home-icon-rest); --ico-hover: var(--home-icon-hover); }
+[class*="st-key-nav-item"][class*="-industry"] { --ico-rest: var(--nav-icon-industry-rest); --ico-hover: var(--nav-icon-industry-hover); }
+[class*="st-key-nav-item"][class*="-jobs"] { --ico-rest: var(--nav-icon-jobs-rest); --ico-hover: var(--nav-icon-jobs-hover); }
+[class*="st-key-nav-item"][class*="-learning"] { --ico-rest: var(--nav-icon-learning-rest); --ico-hover: var(--nav-icon-learning-hover); }
+[class*="st-key-nav-parent"] { --ico-rest: var(--nav-icon-recruit-rest); --ico-hover: var(--nav-icon-recruit-hover); }
+/* 04 상위 메뉴 오른쪽 ^ 단추(펼치기·접기만, 요청 T4): 이름 단추 오른쪽 끝에 겹쳐 둔다(사이드바가 좁아 나란히 두면 이름이 잘림).
+   이름 단추는 그만큼 오른쪽 여백을 비워 두어 누르는 영역이 겹치지 않는다 */
+[class*="st-key-nav-parent"] { position: relative; width: 100% !important; }
+.st-key-nav [data-testid="stLayoutWrapper"]:has(> [class*="st-key-nav-parent"]) { width: 100% !important; }
+[class*="st-key-nav-parent"] > .stElementContainer button { padding-right: var(--space-lg) !important; }
+[class*="st-key-nav-parent"] > [data-testid="stLayoutWrapper"] { position: absolute; right: 0; top: 0; bottom: 0; width: var(--space-lg) !important; z-index: 1; }
+.st-key-nav-fold { height: 100%; width: var(--space-lg) !important; }
+.st-key-nav-fold .stButton, .st-key-nav-fold .stElementContainer { width: 100% !important; height: 100%; }
+.st-key-nav-fold button { width: 100%; padding: 0 !important; justify-content: center; }
+.st-key-nav-fold button > div { justify-content: center; }
+.st-key-nav-fold button::before { content: none !important; display: none; }
+.st-key-nav-fold button [data-testid="stIconMaterial"] { margin: 0; }
+[class*="st-key-nav-parent"] { border-radius: var(--radius-md); }
+[class*="st-key-nav-parent-active"] { background: var(--accent-soft); box-shadow: inset var(--indicator-w) 0 0 var(--primary); }
+[class*="st-key-nav-parent-active"] button { color: var(--text); background: transparent; box-shadow: none; }
+.st-key-nav-subtree { margin-left: var(--space-md); padding-left: var(--space-xs); border-left: var(--border-w) solid var(--border); gap: var(--space-xxs); }
+.st-key-nav-subtree button { font: var(--font-body); font-size: calc(var(--type-nav-size) * var(--nav-sub-ratio)); font-weight: var(--type-card-title-weight);
+  height: var(--button-h) !important; min-height: var(--button-h) !important; }
+
+/* 좌측 하단 문맥 안내 + 테마 토글 */
+.context-card { padding: var(--space-sm); border-radius: var(--radius-md); background: var(--surface-2); }
+.context-card__title { font: var(--font-label); letter-spacing: var(--type-label-ls); color: var(--text); margin: 0 0 var(--space-xxs); }
+.context-card__line { margin: 0 0 var(--space-xxs); font: var(--font-caption); color: var(--text-2); }
+
+/* ================= 상단바 (DESIGN §6.4): 검은 띠 없이 배경 위 ================= */
+.st-key-topbar { min-height: var(--topbar-h); padding: 0 var(--space-xxs); margin-bottom: var(--space-md); gap: var(--space-lg);
+  border-bottom: var(--border-w) solid var(--border); }
+.topbar__brand { display: flex; align-items: baseline; gap: var(--space-md); color: var(--text); }
+.topbar__wordmark { font: var(--font-card-title); font-size: var(--type-section-title-size); }
+.topbar__screen { font: var(--font-body); color: var(--text-2); }
+.st-key-topbar button { white-space: nowrap; }
+
+/* ================= 오른쪽 준비 경로 (DESIGN §6.4) ================= */
+[data-testid="stHorizontalBlock"]:has(> [data-testid="stColumn"] .st-key-roadmap-panel) { gap: var(--gutter); flex-wrap: nowrap; }
+/* 본문 열은 남은 폭만 쓴다(75% + 간격 + 준비 경로 폭이 넘치면 줄바꿈되어 패널이 아래로 떨어지던 문제) */
+[data-testid="stHorizontalBlock"]:has(> [data-testid="stColumn"] .st-key-roadmap-panel) > [data-testid="stColumn"]:not(:has(.st-key-roadmap-panel)) {
+  flex: 1 1 0 !important; min-width: 0 !important; }
+[data-testid="stColumn"]:has(.st-key-roadmap-panel) { flex: 0 0 var(--roadmap-w) !important; width: var(--roadmap-w) !important;
+  min-width: var(--roadmap-w) !important;
+  position: sticky; top: var(--space-md); align-self: flex-start; }   /* 스크롤해도 화면 위쪽에 붙어 따라옴(요청 D5) */
+.st-key-roadmap-panel { background: var(--surface); border-radius: var(--radius-lg); padding: var(--space-md); gap: var(--space-xxs); }
+.roadmap__title { font: var(--font-card-title); color: var(--text); margin: 0 0 var(--space-xs); }
+[class*="st-key-roadmap-step-"] { gap: 0; padding: var(--space-xs); border-radius: var(--radius-md);
+  transition: background var(--duration-base) var(--ease-standard); }
+[class*="st-key-roadmap-step-"]:hover { background: var(--surface-2); }
+.roadmap-step { display: flex; gap: var(--space-sm); align-items: flex-start; }
+.roadmap-step__no { font: var(--font-label); color: var(--text-2); padding-top: var(--space-xxs); }
+.roadmap-step__title { font: var(--font-body); font-weight: var(--type-card-title-weight); color: var(--text); margin: 0; }
+.roadmap-step__state { font: var(--font-caption); color: var(--text-2); margin: 0; }
+[class*="st-key-roadmap-step-"][class*="-set"] .roadmap-step__no { color: var(--primary); }
+/* 담긴 단계 = 사이드바 활성 메뉴와 같은 표시(요청 F9). 모두 해제하면 -set 클래스가 빠져 원래대로 */
+[class*="st-key-roadmap-step-"][class*="-set"] { background: var(--accent-soft); box-shadow: inset var(--indicator-w) 0 0 var(--primary); }
+[class*="st-key-roadmap-step-"][class*="-set"]:hover { background: var(--accent-soft); }
+.roadmap-step__count { font: var(--font-caption); color: var(--text-2); margin-left: var(--space-xs); }
+/* 담긴 항목 한 줄 = 이름 + 해제 (요청 E4·E5) */
+[class*="st-key-roadmap-item-"] { padding-left: var(--space-xl); gap: var(--space-xs); flex-wrap: nowrap; }
+[class*="st-key-roadmap-item-"] .stElementContainer:last-child { width: auto !important; }
+[class*="st-key-roadmap-item-"] button { min-height: 0; height: auto; padding: 0; border: none; background: transparent; }
+[class*="st-key-roadmap-item-"] button p { font: var(--font-caption); color: var(--text-2); white-space: nowrap; }
+[class*="st-key-roadmap-item-"] button [data-testid="stIconMaterial"] { font-size: var(--type-caption-size); color: var(--text-2); }
+[class*="st-key-roadmap-item-"] button:hover p, [class*="st-key-roadmap-item-"] button:hover [data-testid="stIconMaterial"] { color: var(--text); }
+.roadmap-step__state--set { color: var(--text) !important; }
+.roadmap-step__state--set::before { content: "✓ "; color: var(--primary); }
+[class*="st-key-roadmap-step-"] [data-testid="stPageLink"] a { padding: 0; min-height: 0; background: transparent !important; }
+[class*="st-key-roadmap-actions-"] { padding-left: var(--space-xl); }
+[class*="st-key-roadmap-actions-"] .stElementContainer { width: auto !important; }
+[class*="st-key-roadmap-step-"] [data-testid="stPageLink"] a p { font: var(--font-caption); color: var(--primary); }
+
+/* ================= 페이지 소개 (research 3.9) ================= */
+.page-intro { background: var(--surface); border-radius: var(--radius-lg); padding: var(--space-lg); }
+.page-intro__eyebrow { font: var(--font-label); letter-spacing: var(--type-label-ls); color: var(--primary); margin: 0 0 var(--space-xs); }
+.page-intro__title { font: var(--font-page-title); letter-spacing: var(--type-page-title-ls); color: var(--text); margin: 0 0 var(--space-xs); padding: 0; }
+.page-intro__body { font: var(--font-body); color: var(--text-3); max-width: var(--measure); margin: 0; }
+
+/* 04 하위 탭: 활성 = 녹색 밑줄 */
+:is(.st-key-j05-keywords, .st-key-learn-kw, .st-key-j01-pills) [data-testid="stButtonGroup"] div:has(> button) { flex-wrap: wrap; overflow: visible; }
+.st-key-subtabs .stElementContainer, .st-key-subtabs [data-testid="stButtonGroup"] { width: 100% !important; }
+.st-key-subtabs [data-testid="stButtonGroup"] { border-bottom: var(--border-w) solid var(--border); }
+.st-key-subtabs [data-testid="stButtonGroup"] > div { gap: var(--space-lg); }
+.st-key-subtabs button { background: transparent !important; border-radius: 0 !important; font: var(--font-body) !important;
+  font-weight: var(--type-card-title-weight) !important; color: var(--text-2) !important; padding: var(--space-sm) var(--space-xxs) !important;
+  box-shadow: none !important; transform: none !important; }
+.st-key-subtabs button:hover { color: var(--text) !important; }
+.st-key-subtabs [data-testid="stButtonGroup"] button[aria-checked="true"] { background: transparent !important; color: var(--text) !important; box-shadow: inset 0 calc(-1 * var(--indicator-w)) 0 var(--primary) !important; }
+.st-key-subtabs [data-testid="stButtonGroup"] button[aria-checked="true"] p { color: var(--text) !important; }
+
+/* ================= 홈 ================= */
+/* 제목 → 설명 → 요약 카드 4개 → 드론(첫 번째 사진 구성, 요청 P2). 요약 카드·드론은 components/home_hero */
+.home-hero__title { font: var(--hm-font-title); letter-spacing: var(--hm-title-ls); color: var(--text); margin: var(--space-md) 0 var(--hm-title-gap); padding: 0; }
+.home-hero__subtitle { font: var(--font-body); font-size: var(--type-card-title-size); color: var(--text-3); margin: 0 0 var(--hm-gap); }
+/* 이렇게 이용해 보세요: 로드맵(번호 원 + 연결선, 요청 P3). 마커 중심선 위에 연결선: 마커 오른쪽 → 다음 마커 왼쪽(열 간격의 절반씩) */
+.hm-guide { margin-top: var(--hm-guide-mt); }
+.hm-guide .section-title { margin: 0 0 var(--space-xl); }
+.hm-guide__steps { list-style: none; margin: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0 var(--hm-guide-col-gap);
+  padding: var(--hm-guide-pad); background: var(--surface); border-radius: var(--radius-lg);
+  box-shadow: inset 0 0 0 var(--border-w) color-mix(in srgb, var(--text) 7%, transparent); }
+.hm-guide__step { position: relative; min-width: 0; }
+.hm-guide__no { display: flex; align-items: center; justify-content: center; width: var(--hm-guide-no); height: var(--hm-guide-no); box-sizing: border-box;
+  border-radius: var(--radius-full); border: var(--border-w) solid var(--primary); font: var(--hm-font-guide-no); font-variant-numeric: tabular-nums;
+  color: var(--primary); background: var(--surface); position: relative; z-index: 1; }
+.hm-guide__step::before { content: ""; position: absolute; left: calc(var(--hm-guide-no) + var(--space-md)); right: calc(var(--hm-guide-col-gap) / -2);
+  top: calc(var(--hm-guide-no) / 2); height: var(--border-w); transform: translateY(-50%); background: var(--surface-3); }
+.hm-guide__step:last-child::before { display: none; }
+.hm-guide__title { font: var(--hm-font-guide-title); color: var(--text); margin: var(--hm-guide-title-gap); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hm-guide__body { font: var(--font-body); color: var(--text-2); margin: 0; padding-right: var(--space-xs); word-break: keep-all; text-wrap: pretty; }
+.hm-guide__note { font: var(--font-caption); color: var(--text-2); margin: var(--space-sm) 0 0; }
+.section-title.hm-faq-title { margin-top: var(--hm-faq-mt); margin-bottom: var(--space-lg); }
+.hm-note { font: var(--font-caption); color: var(--text-2); margin: var(--space-xl) 0 0; padding-top: var(--space-md);
+  border-top: var(--border-w) solid var(--border); max-width: var(--measure); }
+@media (max-width: 1024px) { .hm-guide__steps { grid-template-columns: repeat(2, minmax(0, 1fr)); row-gap: var(--space-xl); }
+  .hm-guide__step:nth-child(2)::before { display: none; } }
+
+/* ================= 공통 텍스트 ================= */
+.section-title { font: var(--font-section-title); letter-spacing: var(--type-section-title-ls); color: var(--text);
+  margin: var(--space-section) 0 var(--space-xs); padding: 0; }
+.context-line, .result-count, .pager__text, .handoff__text { font: var(--font-body); color: var(--text-3); margin: 0; }
+.context-line b, .result-count b { color: var(--text); }
+.muted { color: var(--text-2); }
+.status-line { font: var(--font-caption); color: var(--text-2); margin: 0; }
+.filter-label { font: var(--font-label); letter-spacing: var(--type-label-ls); color: var(--text-2); margin: 0 0 var(--space-xxs); }
+.st-key-post-mycond { background: var(--surface); border-radius: var(--radius-md); padding: var(--space-sm) var(--space-md); gap: var(--space-xs); }
+[class*="st-key-handoff-"] { background: var(--surface); border-left: var(--indicator-w) solid var(--primary);
+  border-radius: var(--radius-sm); padding: var(--space-xs) var(--space-md); }
+
+/* ================= ChartCard (DESIGN §11.5): 표면 + 호버 한 단계 ================= */
+[class*="st-key-chart-card-"] { background: var(--surface); border-radius: var(--radius-md); padding: var(--space-lg); gap: var(--space-md);
+  min-width: 0; transition: background var(--duration-base) var(--ease-standard); }
+[class*="st-key-chart-card-"]:hover { background: color-mix(in srgb, var(--surface) 70%, var(--surface-2)); }
+.chart-card__title { font: var(--font-chart-title); letter-spacing: var(--type-chart-title-ls); color: var(--text); margin: 0; display: flex; align-items: center; gap: var(--space-xs); flex-wrap: wrap; }
+/* 하나만 고르는 단추 묶음(segmented_control) 공통(요청 V2·W1): 한 덩어리 둥근 틀 + 고른 단추만 반전.
+   04 하위 탭·03 찾는 방식(.st-key-subtabs)은 밑줄 탭 모양이라 제외. 여러 개 고르는 칩(pills)은 그대로 */
+[data-testid="stButtonGroup"]:has(button[data-variant="segmented_control"]):not(.st-key-subtabs *) {
+  gap: var(--space-xxs) !important; padding: var(--space-xxs); border-radius: var(--radius-full); background: var(--surface-2); width: fit-content; }
+[data-testid="stButtonGroup"]:not(.st-key-subtabs *) button[data-variant="segmented_control"] {
+  border: none !important; border-radius: var(--radius-full) !important; background: transparent; color: var(--text-2);
+  font-weight: var(--type-button-weight); padding: var(--space-xxs) var(--space-md); box-shadow: none !important; transform: none !important; }
+[data-testid="stButtonGroup"]:not(.st-key-subtabs *) button[data-variant="segmented_control"]:hover { color: var(--text); background: transparent; }
+[data-testid="stButtonGroup"]:not(.st-key-subtabs *) button[data-variant="segmented_control"][aria-checked="true"] { background: var(--select-bg) !important; color: var(--select-fg) !important; }
+[data-testid="stButtonGroup"]:not(.st-key-subtabs *) button[data-variant="segmented_control"][aria-checked="true"] p { color: var(--select-fg) !important; }
+/* 카드 넘기기 '현재/전체'(요청 W2) */
+.pager__no { font: var(--font-body); color: var(--text-2); margin: 0; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.pager__no b { color: var(--text); }
+.chart-card__subhead { font: var(--font-card-title); color: var(--text); margin: var(--space-lg) 0 var(--space-xxs); }   /* 카드 안 두 번째 그래프 제목(요청 U2) */
+.chart-card__subtitle { font: var(--font-caption); color: var(--text-2); margin: var(--space-xxs) 0 0; }
+.chart-card__footer { font: var(--font-caption); color: var(--text-2); margin: 0; padding-top: var(--space-sm);
+  border-top: var(--border-w) solid var(--border); }
+[class*="st-key-chart-card-"] [data-testid="stExpander"] details { background: var(--surface-2); }
+/* 01 분야 그래프 접힘: 아래 미리보기 2줄을 점점 흐리게 덮어 '더 있음'을 알림, 바로 아래 가운데 더보기 단추 (요청 I3) */
+.st-key-i02-fade, .st-key-c01-fade { position: relative; }   /* 04 기업 탐색 C01도 같음(요청 S1) */
+.st-key-i02-fade::after, .st-key-c01-fade::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: var(--preview-fade-h); pointer-events: none;
+  background: linear-gradient(to bottom, transparent, var(--surface) 80%); backdrop-filter: blur(var(--preview-blur));
+  -webkit-mask-image: linear-gradient(to bottom, transparent, #000 55%); mask-image: linear-gradient(to bottom, transparent, #000 55%); }
+[class*="st-key-chart-card-"]:hover .st-key-i02-fade::after, [class*="st-key-chart-card-"]:hover .st-key-c01-fade::after {
+  background: linear-gradient(to bottom, transparent, color-mix(in srgb, var(--surface) 70%, var(--surface-2)) 80%); }
+.st-key-i02-more, .st-key-c01-more { margin-top: calc(-1 * var(--space-md)); position: relative; z-index: 1; }
+/* 더보기 단추: 테두리 없음(요청 S1, 01·04 공통) */
+.st-key-i02-more button, .st-key-c01-more button { border-color: transparent !important; box-shadow: none !important; }
+/* 나란한 차트 카드 높이 맞춤(요청 E3 줄맞춤): 열에 카드 하나뿐이면 열 높이를 채운다 */
+[data-testid="stColumn"] > [data-testid="stVerticalBlock"] > [data-testid="stLayoutWrapper"]:only-child:has(> [class*="st-key-chart-card-"]) { flex: 1; }
+[data-testid="stColumn"] [data-testid="stLayoutWrapper"]:only-child > [class*="st-key-chart-card-"] { height: 100%; }
+
+/* ================= Badge (DESIGN §7) ================= */
+.ds-badge { display: inline-flex; align-items: center; padding: var(--badge-pad-y) var(--space-xs); border-radius: var(--radius-xs);
+  font: var(--font-label); letter-spacing: 0; white-space: nowrap; vertical-align: middle; }
+.ds-badge--neutral { background: var(--surface-2); color: var(--text); }
+.ds-badge--primary { background: var(--accent-soft); color: var(--text); }
+.ds-badge--defense { background: linear-gradient(135deg, var(--defense-grad-start), var(--defense-deep)); color: var(--on-defense); }
+.ds-badge--drone { background: linear-gradient(135deg, var(--grad-start), var(--grad-end)); color: var(--on-primary); }   /* 드론 교육(요청 L5) */
+.ds-badge--goal { background: var(--accent-soft); color: var(--text); box-shadow: inset var(--indicator-w) 0 0 var(--primary); }
+
+/* ================= 카드 (DESIGN §7): 호버 = 표면 한 단계 + 살짝 뜸 ================= */
+[class*="st-key-card-"] { background: var(--surface); border-radius: var(--radius-md); padding: var(--space-md);
+  gap: var(--space-xs); border: var(--card-border-w) solid var(--control); animation: card-in var(--duration-base) var(--ease-standard);   /* 강조 없는 카드도 테두리가 보이게(요청 O1) */
+  transition: background var(--duration-base) var(--ease-standard), transform var(--duration-base) var(--ease-standard),
+              border-color var(--duration-base) var(--ease-standard); }
+[class*="st-key-card-"]:hover { background: var(--surface-2); transform: translateY(var(--hover-lift)); }
+.card__eyebrow { font: var(--font-label); letter-spacing: var(--type-label-ls); color: var(--text-2); margin: 0; }
+.card__title { font: var(--font-card-title); color: var(--text); margin: var(--space-xxs) 0;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.card__line { font: var(--font-body); color: var(--text-3); margin: 0; display: -webkit-box; -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical; overflow: hidden; }
+.card__tags { display: flex; flex-wrap: wrap; gap: var(--space-xxs); margin-top: var(--space-xs); }
+.card__meta { font: var(--font-caption); color: var(--text-2); margin: var(--space-xs) 0 0; }
+/* 방산 관련 카드 (요청 F2·F6, DESIGN §12.1): 항상 빨강 실선 테두리 + 왼쪽 그라데이션 띠 + 옅은 빨강 바탕 */
+[class*="st-key-card-"][class*="-defense-"] { position: relative; overflow: hidden; border-color: var(--defense-strong);
+  background: linear-gradient(90deg, var(--defense-soft), var(--surface) 45%); padding-left: calc(var(--space-md) + var(--indicator-w)); }
+[class*="st-key-card-"][class*="-defense-"]:hover { background: linear-gradient(90deg, var(--defense-soft), var(--surface-2) 45%); }
+[class*="st-key-card-"][class*="-defense-"]::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: calc(var(--indicator-w) + 2px);
+  background: linear-gradient(180deg, var(--defense-grad-start), var(--defense-grad-end)); }
+/* 방산 강조 ON: 일반 카드 흐리게(건수·순서 불변) */
+[class*="st-key-card-"][class*="-muted-"] .card__title, [class*="st-key-card-"][class*="-muted-"] .card__line { color: var(--text-2); }
+/* 목표 직무 관련 강조 (요청 F5): 관련 = 녹색 왼쪽 띠(방산 띠가 있으면 그 안쪽), 관련 없음 = 옅게 */
+[class*="st-key-card-"][class*="-goal-"] { box-shadow: inset calc(var(--indicator-w) + 2px) 0 0 var(--primary); }
+[class*="st-key-card-"][class*="-defense-"][class*="-goal-"] { box-shadow: inset calc(2 * var(--indicator-w) + 4px) 0 0 var(--primary); }
+[class*="st-key-card-"][class*="-faded-"] { opacity: var(--faded-opacity); }
+[class*="st-key-card-"][class*="-faded-"]:hover { opacity: 1; }
+@keyframes card-in { from { opacity: 0; transform: translateY(var(--space-xxs)); } to { opacity: 1; transform: none; } }
+/* 드론 관련 교육 (요청 L5): 방산처럼 항상 초록 왼쪽 그라데이션 띠 + 옅은 초록 바탕 */
+[class*="st-key-card-"][class*="-drone-"] { position: relative; overflow: hidden;
+  background: linear-gradient(90deg, var(--accent-soft), var(--surface) 45%); padding-left: calc(var(--space-md) + var(--indicator-w)); }
+[class*="st-key-card-"][class*="-drone-"]:hover { background: linear-gradient(90deg, var(--accent-soft), var(--surface-2) 45%); }
+[class*="st-key-card-"][class*="-drone-"]::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: calc(var(--indicator-w) + 2px);
+  background: linear-gradient(180deg, var(--grad-start), var(--grad-end)); }
+[class*="st-key-card-"][class*="-drone-"][class*="-goal-"] { box-shadow: inset calc(2 * var(--indicator-w) + 4px) 0 0 var(--primary); }
+/* 스크랩·선택한 카드 (요청 L4, C안): 살짝 떠오름 + 초록 테두리·그림자. 취소하면 원래대로 */
+[class*="st-key-card-"][class*="-picked-"] { transform: scale(var(--picked-scale)); border-color: var(--primary);
+  box-shadow: 0 0 0 var(--border-w) var(--primary), 0 var(--space-xxs) var(--picked-glow) var(--picked-shadow); }
+[class*="st-key-card-"][class*="-picked-"]:hover { transform: scale(var(--picked-scale)) translateY(var(--hover-lift)); }
+[class*="st-key-card-"][class*="-picked-"][class*="-goal-"] { box-shadow: inset calc(var(--indicator-w) + 2px) 0 0 var(--primary),
+  0 0 0 var(--border-w) var(--primary), 0 var(--space-xxs) var(--picked-glow) var(--picked-shadow); }
+[class*="st-key-card-"][class*="-picked-"][class*="-faded-"] { opacity: 1; }
+/* 카드·팝업의 초록 버튼 = 그라데이션 (요청 L1) */
+[class*="st-key-card-"] button[kind="primary"], [class*="st-key-cbtn-"] button {
+  background: linear-gradient(135deg, var(--grad-start), var(--grad-end)) !important; border: none !important; color: var(--on-primary) !important; }
+[class*="st-key-card-"] button[kind="primary"]:hover, [class*="st-key-cbtn-"] button:hover {
+  background: linear-gradient(135deg, var(--grad-hover-start), var(--grad-hover-end)) !important; }
+[class*="st-key-cbtn-"] button p { color: var(--on-primary) !important; font-weight: var(--type-button-weight) !important; }   /* 굵은 글자(요청 L 후속) */
+/* 별(해당 직무 선택)·책갈피(스크랩) 아이콘 (요청 L2·L3): 빈 모양 → 마우스를 올리면 채워짐, 선택됨 = 채운 모양(올리면 비워짐) */
+[class*="st-key-cbtn-star-"] { --ico-rest: var(--card-star-rest); --ico-hover: var(--card-star-hover); }
+[class*="st-key-cbtn-star-on-"] { --ico-rest: var(--card-star-on); --ico-hover: var(--card-star-off); }
+[class*="st-key-cbtn-bookmark-"] { --ico-rest: var(--card-bookmark-rest); --ico-hover: var(--card-bookmark-hover); }
+[class*="st-key-cbtn-bookmark-on-"] { --ico-rest: var(--card-bookmark-on); --ico-hover: var(--card-bookmark-off); }
+[class*="st-key-cbtn-"] button { gap: var(--space-xxs); }
+[class*="st-key-cbtn-"] button::before { content: ""; flex: none; width: var(--card-icon); height: var(--card-icon); background: currentColor;
+  -webkit-mask: var(--ico-rest) center / contain no-repeat; mask: var(--ico-rest) center / contain no-repeat; }
+[class*="st-key-cbtn-"] button:hover::before { -webkit-mask-image: var(--ico-hover); mask-image: var(--ico-hover); }
+/* 카드 목록 필터 토글 (요청 L5): 방산 관련만(빨강) · 드론 관련만(초록) */
+[class*="st-key-only-"] { border-radius: var(--radius-full); padding: var(--space-xxs) var(--space-md);
+  background: var(--surface-2); width: auto; transition: background var(--duration-base) var(--ease-standard); }
+[class*="st-key-only-defense-on"] { background: linear-gradient(135deg, var(--defense-grad-start), var(--defense-grad-end)); }
+[class*="st-key-only-defense-on"] label, [class*="st-key-only-defense-on"] p { color: var(--on-defense) !important; }
+[class*="st-key-only-drone-on"] { background: linear-gradient(135deg, var(--grad-start), var(--grad-end)); }
+[class*="st-key-only-drone-on"] label, [class*="st-key-only-drone-on"] p { color: var(--on-primary) !important; }
+
+/* 방산 강조 토글 (DESIGN §9.2) */
+[class*="st-key-defense-toggle"] { border-radius: var(--radius-full); padding: var(--space-xxs) var(--space-md);
+  background: var(--surface-2); width: auto; transition: background var(--duration-base) var(--ease-standard); }
+.st-key-defense-toggle-on { background: linear-gradient(135deg, var(--defense-grad-start), var(--defense-grad-end)); }
+/* 목표 직무 관련 강조 토글 (요청 F5) */
+[class*="st-key-goal-toggle"] { border-radius: var(--radius-full); padding: var(--space-xxs) var(--space-md);
+  background: var(--surface-2); width: auto; transition: background var(--duration-base) var(--ease-standard); }
+.st-key-goal-toggle-on { background: linear-gradient(135deg, var(--grad-start), var(--grad-end)); }
+.st-key-goal-toggle-on label, .st-key-goal-toggle-on p { color: var(--on-primary) !important; }
+.st-key-defense-toggle-on label, .st-key-defense-toggle-on p { color: var(--on-defense) !important; }
+
+/* ================= 상세 팝업 (DESIGN §7): Level 3 ================= */
+div[role="dialog"] { background: var(--surface-3) !important; border-radius: var(--radius-md) !important; box-shadow: var(--shadow-dialog) !important; }
+.dlg-head__eyebrow { font: var(--font-label); letter-spacing: var(--type-label-ls); color: var(--text-2); margin: 0; }
+.dlg-head__title { font: var(--font-section-title); color: var(--text); margin: var(--space-xxs) 0; }
+.dlg-head__badges { display: flex; gap: var(--space-xs); flex-wrap: wrap; }
+.dlg-sec { padding: var(--space-sm) 0; border-bottom: var(--border-w) solid var(--border); }
+.dlg-sec__label { font: var(--font-label); letter-spacing: var(--type-label-ls); color: var(--text-2); margin: 0 0 var(--space-xxs); }
+.dlg-sec__text { font: var(--font-body); color: var(--text); margin: 0; }
+.dlg-list__name { font: var(--font-body); color: var(--text); margin: 0; }
+
+/* ================= 01·03 상세 ================= */
+[class*="st-key-i02-detail"] { background: var(--surface); border-radius: var(--radius-md); padding: var(--space-md);
+  border-left: var(--indicator-w) solid var(--primary); gap: var(--space-xs); }
+.detail__title { font: var(--font-card-title); color: var(--text); margin: 0; }
+.detail__label { font: var(--font-caption); color: var(--text-2); margin: 0 0 var(--space-xxs); display: flex; gap: var(--space-xs); align-items: center; }
+.detail__list { margin: 0; padding-left: var(--space-md); font: var(--font-body); color: var(--text-3); }
+.evidence-row { padding: var(--space-sm); border-radius: var(--radius-sm); transition: background var(--duration-fast) var(--ease-standard); }
+.evidence-row:hover { background: var(--surface-2); }
+.evidence-row__title { font: var(--font-body); color: var(--text); margin: 0; }
+.evidence-row__meta { font: var(--font-caption); color: var(--text-2); margin: 0; }
+.why { background: var(--surface); border-radius: var(--radius-md); padding: var(--space-md) var(--space-lg); }
+.why__label { font: var(--font-label); letter-spacing: var(--type-label-ls); color: var(--text-2); margin: 0; }
+.why__text { font: var(--font-body); color: var(--text); margin: 0 0 var(--space-xs); }
+
+/* ================= 반응형 (plan 5.3) ================= */
+@media (max-width: 1439px) {
+  [data-testid="stColumn"]:has(.st-key-roadmap-panel) { flex-basis: var(--roadmap-w-compact) !important;
+    width: var(--roadmap-w-compact) !important; min-width: var(--roadmap-w-compact) !important; }
+}
+@media (max-width: 1024px) { .block-container { padding-left: var(--space-md); padding-right: var(--space-md); } }
+@media (max-width: 767px) {
+  [data-testid="stHorizontalBlock"]:has(> [data-testid="stColumn"] .st-key-roadmap-panel) { flex-wrap: wrap; }
+  [data-testid="stHorizontalBlock"]:has(> [data-testid="stColumn"] .st-key-roadmap-panel) > [data-testid="stColumn"]:not(:has(.st-key-roadmap-panel)) {
+    flex-basis: 100% !important; }
+  [data-testid="stColumn"]:has(.st-key-roadmap-panel) { flex-basis: 100% !important; width: 100% !important; min-width: 0 !important; order: 2;
+    position: static; }
+  .page-intro__title { font: var(--font-section-title); }
+  .home-hero__title { font: var(--font-page-title); }
+  .hm-guide__steps { grid-template-columns: 1fr; gap: var(--space-lg); }
+  .hm-guide__step { padding-left: calc(var(--hm-guide-no) + var(--space-md)); }
+  .hm-guide__no { position: absolute; left: 0; top: 0; }
+  .hm-guide__title { margin-top: var(--space-xxs); white-space: normal; }
+  .hm-guide__step::before, .hm-guide__step:nth-child(2)::before { display: block; left: calc(var(--hm-guide-no) / 2); right: auto;
+    top: calc(var(--hm-guide-no) + var(--space-xs)); bottom: calc(-1 * var(--space-lg) + var(--space-xxs)); width: var(--border-w); height: auto; transform: none; }
+  .hm-guide__step:last-child::before { display: none; }
+  .hm-guide { margin-top: var(--space-3xl); } .section-title.hm-faq-title { margin-top: var(--space-3xl); }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition-duration: 0ms !important; animation: none !important; }
+  .stButton > button:hover, [class*="st-key-card-"]:hover, [class*="st-key-card-"][class*="-picked-"] { transform: none !important; }
+}
+/* 메뉴 항목 컨테이너 높이 고정: page_link(홈~03)와 button(04)의 감싸는 요소 높이 차이(47.5 vs 44px) 제거 */
+[class*="st-key-nav-item"], [class*="st-key-nav-parent"] { height: var(--nav-item-h) !important; gap: 0; }
+.st-key-nav a[data-testid="stPageLink-NavLink"] { margin: 0 !important; }   /* Streamlit 기본 위아래 1.75px 여백 제거 */
+
+/* 02 3D 네트워크 오른쪽 열(요청 M5·M6): 모두 오른쪽 정렬, 칩은 한 줄에 하나, 옅은 구분선, '보러가기'는 열 맨 아래 */
+/* 열 → 안쪽 블록 → 오른쪽 열 블록까지 높이를 이어 받아, 열이 그래프 높이만큼 늘고 '보러가기'가 맨 아래에 고정(요청 M7) */
+[data-testid="stColumn"]:has(.st-key-j01-pills) { align-self: stretch; display: flex; flex-direction: column; }
+[data-testid="stColumn"]:has(.st-key-j01-pills) :is([data-testid="stVerticalBlock"], [data-testid="stLayoutWrapper"]):has(.st-key-j01-pills) { flex: 1; height: 100%; }
+.st-key-j01-pills { align-items: flex-end; height: 100%; gap: var(--space-xs); }
+.st-key-j01-pills [data-testid="stButtonGroup"] div:has(> button) { flex-direction: column; align-items: flex-end; flex-wrap: nowrap; width: 100% !important; max-width: none !important; }
+/* 구분선: 이름이 위, 선이 바로 아래(요청 M8), 선은 조금 더 선명하게(--outline) */
+.j01-sep { display: flex; flex-direction: column; align-items: flex-end; gap: var(--space-xxs); width: 100%; margin: calc(var(--space-lg) + var(--space-md)) 0 0; }   /* 단추·대분류 칩 아래 여백 40px(요청 M9 24px → M10 한 번 더 +16px) */
+.j01-sep::after { content: ""; align-self: stretch; border-top: var(--border-w) solid var(--outline); }
+.j01-sep span { font: var(--font-caption); color: var(--text-2); }
+.j01-hint { font: var(--font-caption); color: var(--text-2); text-align: right; margin: 0; }
+.st-key-j01-btn-cards { margin-top: auto; width: 100%; align-items: flex-end; gap: 0; }
+/* 방산·전체 단추: 꺼짐 = 테두리만, 켜짐 = 채움 */
+[class*="st-key-j01-btn-"] button { font-weight: var(--type-button-weight); background: transparent !important; }
+[class*="st-key-j01-btn-"] button p { color: inherit !important; font-weight: var(--type-button-weight) !important; }
+.st-key-j01-btn-defense button { border: var(--card-border-w) solid var(--defense-strong) !important; color: var(--defense-strong) !important; }
+.st-key-j01-btn-all button { border: var(--card-border-w) solid var(--primary) !important; color: var(--primary) !important; }
+.st-key-j01-btn-defense-on button { border: none !important; color: var(--on-defense) !important;
+  background: linear-gradient(135deg, var(--defense-grad-start), var(--defense-grad-end)) !important;
+  box-shadow: 0 0 var(--space-sm) var(--defense-strong); }
+.st-key-j01-btn-all-on button, .st-key-j01-btn-cards button { border: none !important; color: var(--on-primary) !important;
+  background: linear-gradient(135deg, var(--grad-start), var(--grad-end)) !important; }
+.st-key-j01-pills :is(.st-key-j01-list-major, .st-key-j01-list-middle), .st-key-j01-pills :is(.st-key-j01-list-major, .st-key-j01-list-middle) .stElementContainer,
+.st-key-j01-pills [data-testid="stButtonGroup"] { width: 100% !important; align-self: stretch; }
+/* 오른쪽 열 = 내용(칩·단추) 폭만, 그래프 열이 나머지를 모두 채움(요청 M7 '왼쪽 여백 당겨 그래프 넓게') */
+[data-testid="stHorizontalBlock"]:has(> [data-testid="stColumn"] .st-key-j01-pills) > [data-testid="stColumn"]:first-child { flex: 1 1 0 !important; width: auto !important; min-width: 0; }
+[data-testid="stColumn"]:has(.st-key-j01-pills) { flex: 0 0 auto !important; width: auto !important; min-width: max-content; }
+.st-key-j01-pills button { white-space: nowrap; }
+.st-key-j01-pills > :is([data-testid="stLayoutWrapper"], .stElementContainer):has(.st-key-j01-btn-cards) { margin-top: auto; width: 100%; }
+/* J01 카드: 그래프와 출처 줄 사이 구분선도 오른쪽 열 구분선과 같은 굵기·색(요청 M9) */
+.st-key-chart-card-J01 .chart-card__footer { border-top: var(--border-w) solid var(--outline); }
+/* '관련 직무 카드 보러가기' 세로 1.2배(요청 M9) */
+.st-key-j01-btn-cards button { min-height: calc(var(--button-h) * 1.2); padding-top: var(--space-xs); padding-bottom: var(--space-xs); }
+/* 04 비교 안내 상자(요청 N9): 파란 상자 안에 같은 폭의 파란 테두리 단추 */
+[class*="st-key-h06-note-"] { background: var(--note-bg); border-radius: var(--radius-md); padding: var(--space-sm) var(--space-md); gap: var(--space-md); }
+.h06-note__text { font: var(--font-body); color: var(--note-fg); margin: 0; }
+[class*="st-key-h06-note-"] button { width: var(--note-btn-w); justify-content: center; background: transparent !important;
+  border: var(--border-w) solid var(--note-fg) !important; color: var(--note-fg) !important; }
+[class*="st-key-h06-note-"] button p { color: var(--note-fg) !important; font-weight: var(--type-button-weight); }
+[class*="st-key-h06-note-"] button:hover { background: var(--note-hover) !important; }
+[class*="st-key-only-"] label p { white-space: nowrap; }
+/* 04 내 조건 한 줄(요청 N10): 이름을 단추 왼쪽에 */
+.mc-label { font: var(--font-label); letter-spacing: var(--type-label-ls); color: var(--text-2); margin: 0; white-space: nowrap; }
+.st-key-mc-region .stMultiSelect { flex: 1; min-width: 0; }
+:is(.st-key-mc-edu, .st-key-mc-career, .st-key-mc-region) { flex-wrap: nowrap !important; }
+:is(.st-key-mc-edu, .st-key-mc-career) [data-testid="stButtonGroup"] div:has(> button) { flex-wrap: nowrap; }
+/* 나의 탐색 경로 '내 조건'(요청 N14): 단계와 같은 모양, 위젯 이름은 작은 회색 */
+.st-key-roadmap-mycond { border-top: var(--border-w) solid var(--outline); padding-top: var(--space-sm); gap: var(--space-xs); }
+.st-key-roadmap-mycond [data-testid="stWidgetLabel"] p { font: var(--font-label); letter-spacing: var(--type-label-ls); color: var(--text-2); }

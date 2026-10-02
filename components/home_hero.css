@@ -1,0 +1,159 @@
+/* 홈 3D 드론 Hero (요청 P1·P2, 2026-10-02). 원본: 팀원 home-only.html 의 Home 전용 스타일(.hm-*).
+   값은 core/theme.py 토큰(--hm-*·공통 토큰)만 쓴다. 라이트/다크 차이는 토큰 값이 모드별로 바뀌어 처리된다. */
+.hm-root{--hm-line:color-mix(in srgb,var(--text) 7%,transparent);font-family:var(--font-sans);color:var(--text)}
+
+/* ================= 요약 카드 4개: 하나의 surface + 가는 구분선 (요청 R: C안 — 왼쪽 아이콘 · 오른쪽 화살표, 누르면 그 페이지) ================= */
+.hm-kpi{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));background:var(--surface);border-radius:var(--radius-lg);overflow:hidden;
+  margin:0 0 var(--hm-gap);box-shadow:inset 0 0 0 var(--border-w) var(--hm-line);container-type:inline-size}
+.hm-kpi__item{display:flex;align-items:center;gap:var(--space-sm);padding:var(--hm-kpi-pad-y) var(--hm-kpi-pad-x);min-width:0;border:0;background:transparent;
+  font:inherit;color:inherit;text-align:left;cursor:pointer;opacity:0;transform:translateY(var(--space-xs));
+  animation:hm-rise 400ms var(--ease-standard) forwards;transition:background var(--duration-fast) var(--ease-standard),box-shadow var(--duration-fast) var(--ease-standard)}
+.hm-kpi__item + .hm-kpi__item{border-left:var(--border-w) solid var(--surface-3)}
+.hm-kpi__item:nth-child(2){animation-delay:60ms}.hm-kpi__item:nth-child(3){animation-delay:120ms}.hm-kpi__item:nth-child(4){animation-delay:180ms}
+.hm-kpi__item:hover{background:var(--accent-soft);box-shadow:inset var(--indicator-w) 0 0 var(--primary)}   /* 드론 메뉴 패널과 같은 hover */
+.hm-kpi__item:focus-visible{outline:var(--focus-w) solid var(--text);outline-offset:calc(-1 * var(--space-xxs))}
+/* 아이콘: 첫 프레임 → 마우스를 올린 동안 GIF 움직임 반복(01 KPI 카드와 같은 방식) */
+.hm-kpi__ico{flex:none;width:var(--hm-kpi-icon);height:var(--hm-kpi-icon);background:var(--primary);
+  -webkit-mask:var(--rest) center / contain no-repeat;mask:var(--rest) center / contain no-repeat}
+.hm-kpi__item:hover .hm-kpi__ico{-webkit-mask-image:var(--hover);mask-image:var(--hover)}
+.hm-still .hm-kpi__item:hover .hm-kpi__ico{-webkit-mask-image:var(--rest);mask-image:var(--rest)}
+.hm-kpi__text{flex:1;min-width:0;display:flex;flex-direction:column;gap:var(--space-xxs)}
+.hm-kpi__label{font:var(--hm-font-kpi-label);letter-spacing:.01em;color:var(--text-2)}
+/* 숫자 + 단위 = 한 묶음(기준선 정렬). 단위는 숫자보다 작지만 굵기·명도를 유지해 함께 읽힌다 */
+.hm-kpi__value{display:flex;align-items:baseline;font:var(--hm-font-kpi-value);letter-spacing:-0.02em;color:var(--text);white-space:nowrap;font-variant-numeric:tabular-nums}
+.hm-kpi__unit{font:var(--hm-font-kpi-unit);color:color-mix(in srgb,var(--text) 80%,var(--text-2));margin-left:var(--hm-unit-gap);letter-spacing:-0.01em}
+/* 오른쪽 화살표(›): 마우스를 올리면 초록 + 오른쪽으로 조금 */
+.hm-kpi__go{flex:none;width:var(--hm-kpi-go);height:var(--hm-kpi-go);border-right:1.5px solid var(--text-2);border-top:1.5px solid var(--text-2);
+  transform:translateX(calc(-1 * var(--space-xxs))) rotate(45deg);transition:transform var(--duration-fast) var(--ease-standard),border-color var(--duration-fast) var(--ease-standard)}
+.hm-kpi__item:hover .hm-kpi__go{border-color:var(--primary);transform:translateX(0) rotate(45deg)}
+@keyframes hm-rise{to{opacity:1;transform:none}}
+.hm-still .hm-kpi__item{animation:none;opacity:1;transform:none}
+
+/* ================= Drone Hero stage ================= */
+.hm-stage{position:relative;height:var(--hm-h);background:var(--hm-stage-bg);border-radius:var(--radius-lg);overflow:hidden;color:var(--text);
+  --pc:calc(var(--hm-h) * .043);container-type:inline-size;box-shadow:inset 0 0 0 var(--border-w) var(--hm-line)}
+/* 열린 상태: 무대 안쪽만 아주 약하게 dim */
+.hm-stage::before{content:"";position:absolute;inset:0;background:var(--hm-dim);opacity:0;pointer-events:none;transition:opacity 400ms var(--ease-standard);z-index:0}
+.hm-stage.is-open::before{opacity:var(--hm-dim-open)}
+.hm-air-canvas{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:0}
+.hm-guides{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:0;color:var(--primary);opacity:0;transition:opacity 420ms var(--ease-standard) 120ms}
+.hm-stage.is-open .hm-guides{opacity:1}
+.hm-guide-line{fill:none;stroke:currentColor;stroke-width:1;stroke-dasharray:2 6;opacity:.32}
+.hm-guide-dot{fill:currentColor;opacity:.45}
+.hm-guide-line.is-active{opacity:.7;transition:opacity 300ms var(--ease-standard)}.hm-guide-dot.is-active{opacity:.9}
+
+/* 드론 영역(button): 최대 360×225, 무대 폭이 좁으면 오각형 패널과 겹치지 않게 함께 줄어든다 */
+.hm-core{position:absolute;left:50%;top:calc(50% + var(--pc));width:clamp(220px, 80cqw - 378px, var(--hm-drone-w));aspect-ratio:8 / 5;height:auto;
+  transform:translate(-50%,-50%);border:0;padding:0;background:transparent;cursor:pointer;border-radius:var(--radius-lg);z-index:1}
+.hm-core:focus-visible{outline:var(--focus-w) solid var(--text);outline-offset:var(--space-xs)}
+.hm-core::after{content:"";position:absolute;inset:-10% -17%}             /* 기체 전체가 눌리도록 클릭 영역 확장(패널은 위 레이어라 영향 없음) */
+/* 드론 크기: 3D canvas를 드론 버튼의 235%로(카메라 fit이 canvas 폭 기준이라 기체 전체가 비례) */
+.hm-canvas{position:absolute;left:50%;top:50%;width:235%;height:235%;transform:translate(-50%,-50%);pointer-events:none;opacity:0;transition:opacity 220ms var(--ease-standard)}
+.hm-stage.is-3d .hm-canvas{opacity:1}
+.hm-svg{display:block;width:100%;height:100%;overflow:visible;visibility:hidden}
+.hm-stage.is-fallback .hm-svg{visibility:visible}
+
+/* ring: 반복 pulse 없음. hover 소폭 강조 / 클릭 순간 1회 response / 닫을 때 원위치 */
+.hm-ring{--d:calc(clamp(190px, (80cqw - 378px) * .83, var(--hm-ring)) * 1.25);position:absolute;left:50%;top:calc(50% + var(--pc));width:var(--d);height:var(--d);
+  margin:calc(var(--d) / -2) 0 0 calc(var(--d) / -2);border-radius:50%;border:var(--border-w) solid var(--primary);opacity:.10;pointer-events:none;z-index:0;
+  transition:opacity 300ms var(--ease-standard)}
+.hm-ring--b{opacity:0;transform:scale(.7)}
+.hm-stage.is-hover .hm-ring:not(.hm-ring--b){opacity:.16}
+.hm-stage.is-engaged .hm-ring:not(.hm-ring--b){animation:hm-ring-hit 420ms cubic-bezier(.2,.7,.2,1) forwards}
+.hm-stage.is-engaged .hm-ring--b{animation:hm-ring-in 420ms cubic-bezier(.2,.7,.2,1) 60ms forwards}
+.hm-stage.is-engaged-static .hm-ring:not(.hm-ring--b){opacity:0}
+.hm-stage.is-engaged-static .hm-ring--b{opacity:.10;transform:none}
+.hm-stage.is-releasing .hm-ring:not(.hm-ring--b){animation:hm-ring-back 380ms var(--ease-standard) forwards}
+.hm-stage.is-releasing .hm-ring--b{animation:hm-ring-out 240ms var(--ease-standard) forwards}
+.hm-stage.is-arriving .hm-ring{opacity:0!important}                     /* 진입·복귀·출발 비행 중 ring은 숨겼다가 도착하면 서서히 */
+@keyframes hm-ring-hit{0%{opacity:.12;transform:scale(1)}24%{opacity:.26;transform:scale(1.015)}100%{opacity:0;transform:scale(1.12)}}
+@keyframes hm-ring-in{from{opacity:0;transform:scale(.7)}to{opacity:.10;transform:scale(1)}}
+@keyframes hm-ring-back{from{opacity:0;transform:scale(1.06)}to{opacity:.10;transform:scale(1)}}
+@keyframes hm-ring-out{from{opacity:.10;transform:scale(1)}to{opacity:0;transform:scale(.9)}}
+
+/* 5개 패널: 드론 중심 기준 정오각형. 패널 3D 전개: 드론 쪽으로 당겨진 채 깊이에서 살짝 기울어 있다가 → 제자리로 떠오른다(stagger).
+   원근의 중심은 드론. 열린 뒤에는 평면(글자 선명도 유지) */
+.hm-menu{position:absolute;inset:0;pointer-events:none;z-index:2;--rx2:min(371px, 50% - 120px);transition:opacity 240ms var(--ease-standard);
+  perspective:1100px;perspective-origin:50% calc(50% + var(--pc))}
+.hm-go{position:absolute;pointer-events:auto;display:flex;flex-direction:column;align-items:flex-start;gap:var(--space-xxs);box-sizing:border-box;
+  width:var(--hm-panel-w);padding:var(--hm-panel-pad-y) var(--space-md);border-radius:var(--radius-md);cursor:pointer;background:var(--surface-2);border:none;color:var(--text);text-align:left;
+  left:calc(50% + var(--dx));top:calc(50% + var(--dy));opacity:0;visibility:hidden;
+  --oz:-150px;--s0:.9;--tx:calc(var(--dx) * -.3);--ty:calc((var(--dy) - var(--pc)) * -.3);--od:calc(120ms + var(--i) * 55ms);--cd:calc((4 - var(--i)) * 45ms);
+  transform:translate(-50%,-50%) translate3d(var(--tx),var(--ty),var(--oz)) rotateX(var(--rx,0deg)) rotateY(var(--ry,0deg)) scale(var(--s0));
+  transition-property:opacity,transform,visibility,background,box-shadow;
+  transition-duration:260ms,560ms,0s,var(--duration-fast),var(--duration-fast);
+  transition-timing-function:var(--ease-standard),cubic-bezier(.16,.84,.24,1),linear,var(--ease-standard),var(--ease-standard);
+  transition-delay:var(--cd),var(--cd),calc(var(--cd) + 300ms),0s,0s}
+.hm-stage.is-open .hm-go{opacity:1;visibility:visible;transform:translate(-50%,-50%) translate3d(0px,0px,0px) rotateX(0deg) rotateY(0deg) scale(1);
+  transition-delay:var(--od),var(--od),0s,0s,0s}
+.hm-stage.is-open.is-revealed .hm-go{transition-delay:0s}
+.hm-go:hover{background:var(--accent-soft);box-shadow:inset var(--indicator-w) 0 0 var(--primary)}
+.hm-stage.is-open.is-revealed .hm-go:hover{transform:translate(-50%,-50%) translate3d(0px,0px,12px) rotateX(0deg) rotateY(0deg) scale(var(--hover-scale))}
+.hm-go:focus-visible{outline:var(--focus-w) solid var(--text);outline-offset:var(--indicator-w)}
+.hm-go b{display:flex;align-items:center;gap:var(--space-xs);font:var(--hm-font-panel);letter-spacing:0;white-space:nowrap}
+/* 패널 아이콘(요청 Q2): 정적 그림을 마스크로, 초록 */
+.hm-go__ico{flex:none;width:var(--hm-panel-icon);height:var(--hm-panel-icon);background:var(--primary);-webkit-mask:var(--ico) center / contain no-repeat;mask:var(--ico) center / contain no-repeat}
+.hm-go span{font:var(--hm-font-panel-desc);color:var(--text-2);white-space:nowrap}
+.hm-p1{--dx:0px;--dy:calc(var(--pc) - var(--hm-h) * .444);--i:0;--rx:-16deg}
+.hm-p2{--dx:var(--rx2);--dy:calc(var(--pc) - var(--hm-h) * .137);--i:1;--ry:-18deg}
+.hm-p3{--dx:calc(var(--rx2) * -1);--dy:calc(var(--pc) - var(--hm-h) * .137);--i:2;--ry:18deg}
+.hm-p4{--dx:calc(var(--rx2) * -.618);--dy:calc(var(--pc) + var(--hm-h) * .359);--i:3;--rx:12deg;--ry:12deg}
+.hm-p5{--dx:calc(var(--rx2) * .618);--dy:calc(var(--pc) + var(--hm-h) * .359);--i:4;--rx:12deg;--ry:-12deg}
+
+/* 움직임 멈추기: 작은 low-contrast pause/play 아이콘 버튼 */
+.hm-toggle{position:absolute;right:var(--space-sm);top:var(--space-sm);z-index:3;width:var(--hm-toggle);height:var(--hm-toggle);display:inline-flex;align-items:center;justify-content:center;
+  color:var(--text-2);background:transparent;border:none;border-radius:var(--radius-full);padding:0;cursor:pointer;opacity:.55;
+  transition:opacity var(--duration-fast) var(--ease-standard),background var(--duration-fast) var(--ease-standard)}
+.hm-toggle:hover,.hm-toggle:focus-visible{opacity:1;background:var(--surface-2);color:var(--text)}
+.hm-toggle:focus-visible{outline:var(--focus-w) solid var(--text);outline-offset:2px}
+.hm-toggle[aria-pressed="true"]{opacity:.8}
+.hm-toggle__icon{width:var(--hm-toggle-icon);height:var(--hm-toggle-icon);fill:currentColor}
+.hm-toggle__icon--play,.hm-toggle[aria-pressed="true"] .hm-toggle__icon--pause{display:none}
+.hm-toggle[aria-pressed="true"] .hm-toggle__icon--play{display:block}
+
+/* ================= SVG 대체 드론(3D 로드 실패 시에만 보임) ================= */
+.hm-stage:not(.is-still) .hm-sv-body{animation:hm-float 4s ease-in-out infinite alternate}
+.hm-sv-rotor{transform-box:fill-box;transform-origin:50% 50%}
+.hm-stage:not(.is-still) .hm-sv-rotor{animation:hm-spin .16s linear infinite}.hm-stage:not(.is-still) .hm-sv-rotor.hm-sv-r2{animation-direction:reverse}
+.hm-svg .hm-sv-shadow{fill:var(--hm-sv-shadow);opacity:.55;filter:url(#hd-soft)}
+.hm-svg .hm-sv-arm-under{stroke:var(--hm-sv-arm-under);stroke-width:9;stroke-linecap:round;fill:none}
+.hm-svg .hm-sv-arm-top{stroke:var(--hm-sv-arm-top);stroke-width:4.4;stroke-linecap:round;fill:none}
+.hm-svg .hm-sv-mount{fill:var(--hm-sv-mount)}
+.hm-svg .hm-sv-band{fill:none;stroke:var(--hm-sv-band);stroke-width:1}
+.hm-svg .hm-sv-bell{fill:var(--hm-sv-bell)}
+.hm-svg .hm-sv-shaft{fill:var(--hm-sv-shaft)}
+.hm-svg .hm-sv-disc{fill:url(#hd-disc)}
+.hm-svg .hm-sv-blade path{fill:url(#hd-blade)}
+.hm-svg .hm-sv-ghost path{fill:var(--hm-sv-ghost);opacity:.35}.hm-svg .hm-sv-ghost.hm-sv-g2 path{opacity:.16}
+.hm-svg .hm-sv-spinner{fill:var(--hm-sv-spinner);stroke:var(--hm-sv-spinner-line);stroke-width:1}
+.hm-svg .hm-sv-hull{stroke:var(--hm-sv-hull-line);stroke-width:.8;transition:stroke var(--duration-fast) var(--ease-standard)}
+.hm-svg .hm-sv-panel{fill:none;stroke:var(--hm-sv-panel);stroke-width:.8}
+.hm-svg .hm-sv-vent{fill:none;stroke:var(--hm-sv-vent);stroke-width:1.1;stroke-linecap:round}
+.hm-svg .hm-sv-spec{fill:var(--hm-sv-spec);opacity:.28}
+.hm-svg .hm-sv-edge{fill:none;stroke:var(--hm-sv-edge);stroke-width:.8}
+.hm-svg .hm-sv-sensor{fill:var(--hm-sv-sensor);stroke:var(--hm-sv-sensor-line);stroke-width:.8}
+.hm-svg .hm-sv-glint{fill:var(--hm-sv-spec);opacity:.7}
+.hm-svg .hm-sv-gimbal{fill:var(--hm-sv-gimbal);stroke:var(--hm-sv-sensor-line);stroke-width:.8}
+.hm-svg .hm-sv-lens{fill:var(--hm-sv-lens);stroke:var(--hm-sv-lens-line);stroke-width:1.2}
+.hm-svg .hm-sv-led{filter:url(#hd-glow)}.hm-svg .hm-sv-led.hm-sv-cw{fill:var(--hm-motor-cw)}.hm-svg .hm-sv-led.hm-sv-ccw{fill:var(--hm-motor-ccw)}
+.hm-core:hover .hm-sv-hull{stroke:var(--primary)}
+@keyframes hm-float{from{transform:translateY(-4px) rotate(-1.2deg)}to{transform:translateY(4px) rotate(1.2deg)}}
+@keyframes hm-spin{to{transform:rotate(360deg)}}
+
+/* ================= 반응형 ================= */
+@media (max-width:1024px){.hm-kpi{grid-template-columns:repeat(2,minmax(0,1fr))}.hm-kpi__item:nth-child(3){border-left:0}
+  .hm-kpi__item:nth-child(n+3){border-top:var(--border-w) solid var(--surface-3)}}
+@media (max-width:767px){
+  .hm-stage{height:auto;padding-bottom:var(--space-md)}
+  .hm-core{position:relative;left:auto;top:auto;transform:none;margin:var(--space-lg) auto 0;display:block;width:240px}
+  .hm-ring{top:calc(var(--space-lg) + 75px)}
+  .hm-menu{position:static;display:grid;grid-template-columns:1fr 1fr;gap:var(--space-xs);padding:var(--space-md)}
+  .hm-go{position:static;transform:none!important;width:auto}
+  .hm-stage:not(.is-open) .hm-menu{display:none}
+  .hm-guides{display:none}}
+@media (max-width:560px){.hm-kpi{grid-template-columns:1fr}
+  .hm-kpi__item{padding:var(--space-md) var(--space-lg)}.hm-kpi__item + .hm-kpi__item{border-left:0;border-top:var(--border-w) solid var(--surface-3)}}
+@media (prefers-reduced-motion:reduce){
+  .hm-kpi__item{animation:none;opacity:1;transform:none}
+  .hm-go{--s0:1}
+  .hm-go,.hm-stage.is-open .hm-go,.hm-stage.is-open.is-revealed .hm-go:hover{transform:translate(-50%,-50%)}}
