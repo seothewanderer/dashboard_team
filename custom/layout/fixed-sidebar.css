@@ -1,0 +1,17 @@
+/* =========================================================
+   Fixed Sidebar — permanent fixed-width left navigation
+   Keeps the sidebar visible at --sidebar-w on desktop and hides
+   the collapse control. Opt-in: load only in dashboards that want
+   a non-collapsible sidebar.
+   Required classes: .sidebar (navigation column), .sidebar-btn
+   (collapse toggle). Required token: --sidebar-w.
+   ========================================================= */
+.sidebar {
+  width: var(--sidebar-w);
+  flex: 0 0 var(--sidebar-w);
+  margin-left: 0 !important;
+}
+
+.sidebar-btn {
+  display: none;
+}

@@ -1,0 +1,105 @@
+/* =========================================================
+   Drone Hero — stage, drone button, 3D canvas, rings, motion
+   toggle, flight/handoff states, SVG fallback drone
+   (runtime: drone-hero.js). Values use host design tokens, so
+   the hero follows the dark/light theme.
+   ========================================================= */
+.hm-stage{position:relative;height:var(--hm-h);background:var(--surface);border-radius:var(--radius-lg);overflow:hidden;color:var(--text);
+  --hm-h:540px;--hm-drone-w:360px;--hm-ring:300px;--pc:calc(var(--hm-h) * .043);container-type:inline-size;
+  --motor-light-cw:#ff4a3d;--motor-light-ccw:#2fe07c}
+html[data-theme="light"] .hm-stage,.theme-light .hm-stage{--motor-light-cw:#fff8ee;--motor-light-ccw:#fff8ee}
+/* 열린 상태: 무대 안쪽만 아주 약하게 dim */
+.hm-stage::before{content:"";position:absolute;inset:0;background:#000;opacity:0;pointer-events:none;transition:opacity 400ms var(--ease-standard);z-index:0}
+.hm-stage.is-open::before{opacity:.045}
+html[data-theme="light"] .hm-stage.is-open::before{opacity:.025}
+
+/* 드론 영역(button): 최대 360×225, 무대 폭이 좁으면 오각형 카드와 겹치지 않게 함께 줄어든다 */
+.hm-core{position:absolute;left:50%;top:calc(50% + var(--pc));width:clamp(220px, 80cqw - 378px, var(--hm-drone-w));aspect-ratio:8 / 5;height:auto;
+  transform:translate(-50%,-50%);border:0;padding:0;background:transparent;cursor:pointer;border-radius:var(--radius-lg);z-index:1}
+.hm-core:focus-visible{outline:var(--focus-w) solid var(--text);outline-offset:var(--space-xs)}
+.hm-core::after{content:"";position:absolute;inset:-10% -17%}             /* 기체 전체가 눌리도록 클릭 영역 확장(패널은 위 레이어라 영향 없음) */
+/* 드론 크기: 3D canvas를 드론 버튼의 235%로(카메라 fit이 canvas 폭 기준이라 기체 전체가 비례) */
+.hm-canvas{position:absolute;left:50%;top:50%;width:235%;height:235%;transform:translate(-50%,-50%);pointer-events:none;opacity:0;transition:opacity 220ms var(--ease-standard)}
+.hm-stage.is-3d .hm-canvas{opacity:1}
+.hm-svg{display:block;width:100%;height:100%;overflow:visible;visibility:hidden}
+.hm-stage.is-fallback .hm-svg{visibility:visible}
+
+/* ring: 반복 pulse 없음. hover 소폭 강조 / 클릭 순간 1회 response / 닫을 때 원위치. 크기는 드론과 함께 1.25배 */
+.hm-ring{--d:calc(clamp(190px, (80cqw - 378px) * .83, var(--hm-ring)) * 1.25);position:absolute;left:50%;top:calc(50% + var(--pc));width:var(--d);height:var(--d);
+  margin:calc(var(--d) / -2) 0 0 calc(var(--d) / -2);border-radius:50%;border:1px solid var(--primary);opacity:.10;pointer-events:none;z-index:0;
+  transition:opacity 300ms var(--ease-standard)}
+.hm-ring--b{opacity:0;transform:scale(.7)}
+.hm-stage.is-hover .hm-ring:not(.hm-ring--b){opacity:.16}
+.hm-stage.is-engaged .hm-ring:not(.hm-ring--b){animation:hm-ring-hit 420ms cubic-bezier(.2,.7,.2,1) forwards}
+.hm-stage.is-engaged .hm-ring--b{animation:hm-ring-in 420ms cubic-bezier(.2,.7,.2,1) 60ms forwards}
+.hm-stage.is-engaged-static .hm-ring:not(.hm-ring--b){opacity:0}
+.hm-stage.is-engaged-static .hm-ring--b{opacity:.10;transform:none}
+.hm-stage.is-releasing .hm-ring:not(.hm-ring--b){animation:hm-ring-back 380ms var(--ease-standard) forwards}
+.hm-stage.is-releasing .hm-ring--b{animation:hm-ring-out 240ms var(--ease-standard) forwards}
+@keyframes hm-ring-hit{0%{opacity:.12;transform:scale(1)}24%{opacity:.26;transform:scale(1.015)}100%{opacity:0;transform:scale(1.12)}}
+@keyframes hm-ring-in{from{opacity:0;transform:scale(.7)}to{opacity:.10;transform:scale(1)}}
+@keyframes hm-ring-back{from{opacity:0;transform:scale(1.06)}to{opacity:.10;transform:scale(1)}}
+@keyframes hm-ring-out{from{opacity:.10;transform:scale(1)}to{opacity:0;transform:scale(.9)}}
+
+/* 움직임 멈추기: 작은 low-contrast pause/play 아이콘 버튼 */
+.hm-toggle{position:absolute;right:var(--space-sm);top:var(--space-sm);z-index:3;width:32px;height:32px;display:inline-flex;align-items:center;justify-content:center;
+  color:var(--text-2);background:transparent;border:none;border-radius:var(--radius-full);padding:0;cursor:pointer;opacity:.55;
+  transition:opacity var(--duration-fast) var(--ease-standard),background var(--duration-fast) var(--ease-standard)}
+.hm-toggle:hover,.hm-toggle:focus-visible{opacity:1;background:var(--surface-2);color:var(--text)}
+.hm-toggle:focus-visible{outline:var(--focus-w) solid var(--text);outline-offset:2px}
+.hm-toggle[aria-pressed="true"]{opacity:.8}
+.hm-toggle__icon{width:14px;height:14px;fill:currentColor}
+.hm-toggle__icon--play,.hm-toggle[aria-pressed="true"] .hm-toggle__icon--pause{display:none}
+.hm-toggle[aria-pressed="true"] .hm-toggle__icon--play{display:block}
+
+/* 패널 선택 → 드론 비행 → handoff (단계 class는 drone-hero.js가 시간 순서대로 붙인다) */
+.hm-stage.is-leaving .hm-core{pointer-events:none}
+.hm-stage.is-leaving.is-fade-ring .hm-ring{animation:none;opacity:0;transition:opacity 260ms var(--ease-standard)}
+.hm-stage.is-leaving.is-fade-others .hm-svg{opacity:0;transition:opacity 300ms var(--ease-standard)}
+/* 방향성 surface handoff: 본문 영역(overlayHost)만 선택 방향으로 gradient mask wipe → 이동 후 걷히며 도착 화면 노출 */
+@property --hm-wipe{syntax:'<percentage>';inherits:false;initial-value:0%}
+.hm-handoff-overlay{position:fixed;z-index:40;pointer-events:none;background:var(--hm-bg,var(--bg));--hm-wipe:0%;
+  -webkit-mask-image:linear-gradient(var(--hm-ang,90deg),#000 calc(var(--hm-wipe) - 45%),transparent var(--hm-wipe));
+  mask-image:linear-gradient(var(--hm-ang,90deg),#000 calc(var(--hm-wipe) - 45%),transparent var(--hm-wipe));
+  transition:--hm-wipe 380ms cubic-bezier(.4,0,.2,1),opacity 300ms var(--ease-standard)}
+.hm-handoff-overlay.is-run{--hm-wipe:145%}
+.hm-handoff-overlay.is-out{opacity:0}
+.hm-handoff-overlay.is-fade{-webkit-mask-image:none;mask-image:none;opacity:0;transition:opacity 200ms var(--ease-standard)}
+.hm-handoff-overlay.is-fade.is-run{opacity:1}
+.hm-handoff-overlay.is-fade.is-run.is-out{opacity:0}
+
+/* ================= SVG 대체 드론(3D 로드 실패 시에만 보임) ================= */
+.hm-stage:not(.is-still) .hm-sv-body{animation:hm-float 4s ease-in-out infinite alternate}
+.hm-sv-rotor{transform-box:fill-box;transform-origin:50% 50%}
+.hm-stage:not(.is-still) .hm-sv-rotor{animation:hm-spin .16s linear infinite}.hm-stage:not(.is-still) .hm-sv-rotor.hm-sv-r2{animation-direction:reverse}
+.hm-svg .hm-sv-shadow{fill:#000;opacity:.55;filter:url(#hd-soft)}
+.hm-svg .hm-sv-arm-under{stroke:#16181b;stroke-width:9;stroke-linecap:round;fill:none}
+.hm-svg .hm-sv-arm-top{stroke:#4a4f56;stroke-width:4.4;stroke-linecap:round;fill:none}
+.hm-svg .hm-sv-mount{fill:#1c1e22}
+.hm-svg .hm-sv-band{fill:none;stroke:#0d0e10;stroke-width:1}
+.hm-svg .hm-sv-bell{fill:#1a1c1f}
+.hm-svg .hm-sv-shaft{fill:#c3c8ce}
+.hm-svg .hm-sv-disc{fill:url(#hd-disc)}
+.hm-svg .hm-sv-blade path{fill:url(#hd-blade)}
+.hm-svg .hm-sv-ghost path{fill:#3a3e44;opacity:.35}.hm-svg .hm-sv-ghost.hm-sv-g2 path{opacity:.16}
+.hm-svg .hm-sv-spinner{fill:#2a2d31;stroke:#8a9098;stroke-width:1}
+.hm-svg .hm-sv-hull{stroke:rgba(255,255,255,.12);stroke-width:.8;transition:stroke var(--duration-fast) var(--ease-standard)}
+.hm-svg .hm-sv-panel{fill:none;stroke:rgba(0,0,0,.35);stroke-width:.8}
+.hm-svg .hm-sv-vent{fill:none;stroke:rgba(0,0,0,.45);stroke-width:1.1;stroke-linecap:round}
+.hm-svg .hm-sv-spec{fill:#fff;opacity:.28}
+.hm-svg .hm-sv-edge{fill:none;stroke:rgba(255,255,255,.22);stroke-width:.8}
+.hm-svg .hm-sv-sensor{fill:#050608;stroke:#3b4047;stroke-width:.8}
+.hm-svg .hm-sv-glint{fill:#fff;opacity:.7}
+.hm-svg .hm-sv-gimbal{fill:#1e2024;stroke:#3b4047;stroke-width:.8}
+.hm-svg .hm-sv-lens{fill:#0b0c0e;stroke:#6d737b;stroke-width:1.2}
+.hm-svg .hm-sv-led{filter:url(#hd-glow)}.hm-svg .hm-sv-led.hm-sv-cw{fill:var(--motor-light-cw)}.hm-svg .hm-sv-led.hm-sv-ccw{fill:var(--motor-light-ccw)}
+.hm-core:hover .hm-sv-hull{stroke:var(--primary)}
+@keyframes hm-float{from{transform:translateY(-4px) rotate(-1.2deg)}to{transform:translateY(4px) rotate(1.2deg)}}
+@keyframes hm-spin{to{transform:rotate(360deg)}}
+
+.hm-stage.is-arriving .hm-ring{opacity:0!important}                     /* 진입·복귀 비행 중 ring은 숨겼다가 도착하면 서서히 */
+
+@media (max-width:767px){
+  .hm-stage{height:auto;padding-bottom:var(--space-md)}
+  .hm-core{position:relative;left:auto;top:auto;transform:none;margin:var(--space-lg) auto 0;display:block;width:240px}
+  .hm-ring{top:calc(var(--space-lg) + 75px)}}

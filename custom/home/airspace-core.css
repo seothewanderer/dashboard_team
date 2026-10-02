@@ -1,0 +1,7 @@
+/* =========================================================
+   Airspace Core — canvas layer (runtime: airspace-core.js)
+   One Canvas 2D sheet behind the drone, inside the stage.
+   Colors come from --hm-air-* variables set by the theme
+   palettes (airspace-dark.css / airspace-light.css).
+   ========================================================= */
+.hm-air-canvas{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:0}

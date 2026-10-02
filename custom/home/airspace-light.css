@@ -1,0 +1,13 @@
+/* =========================================================
+   Light Airspace — daylight palette (runtime: airspace-light.js)
+   다크 반전이 아닌 별도 설계 — white mist 대기 · 원경 산맥 대기 원근 · 수면 반사 · 옅은 면 · 발광 없음 · 얇은 라벨
+   주간: 격자 없음 · 잔디 그라데이션 지면 · 지면 점 옅게
+   Applies when the host theme is light (<html data-theme="light">).
+   ========================================================= */
+html[data-theme="light"] .hm-stage{--hm-air-mode:day;--hm-air-mesh:114,141,150;--hm-air-grid:150,164,171;--hm-air-low-a:44,146,140;--hm-air-low-b:46,140,108;--hm-air-high-a:212,104,92;--hm-air-high-b:190,80,76;
+  --hm-air-limit:176,72,66;--hm-air-scan:104,150,160;--hm-air-txt-lo:36,112,92;--hm-air-txt-hi:172,68,64;--hm-air-plate:248,250,251;--hm-air-plate-a:.55;
+  --hm-air-fill:.07;--hm-air-wash:.07;--hm-air-k:1.42;--hm-air-grid-k:0;
+  --hm-air-star-a:0;--hm-air-ground:176,206,190;--hm-air-ground-b:128,184,150;--hm-air-ground-a:.26;--hm-air-ground-pts:.45;--hm-air-lw:500;--hm-air-blend:source-over;
+  --hm-air-ridge:116,140,162;--hm-air-ridge-fill:.22;--hm-air-ridge-line:1.9;--hm-air-haze:247,249,251;--hm-air-haze-a:.7;
+  --hm-air-water:98,148,184;--hm-air-water-a:.2;--hm-air-glint:76,128,162;--hm-air-reflect:.26;--hm-air-shimmer:.08;--hm-air-fog:1.4;--hm-air-ceil:.035;
+  background:radial-gradient(46% 58% at 50% 55%,rgba(222,230,234,.5),rgba(222,230,234,0) 70%),linear-gradient(180deg,#EDF2F5 0%,#F5F8F9 42%,#F7F9FA 100%)}

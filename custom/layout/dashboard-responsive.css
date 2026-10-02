@@ -1,0 +1,38 @@
+/* =========================================================
+   Dashboard Responsive — collapsible right roadmap overlay
+   The roadmap toggle sits at the right end of the topbar and the
+   open roadmap is an overlay anchored below it (no content reflow).
+   While it is open, wide content frames reserve the roadmap width
+   so the two-column content width matches the docked layout.
+   Breakpoints: ≥1440 (--roadmap-w) · 1180–1439 (--roadmap-w-compact);
+   below 1180 the host layout stacks/overlays without reservation.
+   No global zoom or transform: scale() is used.
+   Required classes: #main > .topbar > [data-act="roadmap"] toggle,
+   #main > .topbar > .roadmap overlay, #main > .frame(.frame--wide).
+   Required tokens: --space-xs, --gutter, --roadmap-w, --roadmap-w-compact.
+   ========================================================= */
+.topbar > [data-act="roadmap"] {
+  margin-left: auto;
+  flex: none;
+}
+
+#main .topbar > .roadmap {
+  position: absolute;
+  top: calc(100% + var(--space-xs));
+  right: 0;
+  z-index: 10;
+}
+
+/* Preserve the two-column content width after the roadmap moves
+   from the frame into the topbar overlay. */
+@media (min-width: 1440px) {
+  #main:has(> .topbar > .roadmap) > .frame:not(.frame--wide) {
+    padding-right: calc(var(--roadmap-w) + var(--gutter));
+  }
+}
+
+@media (min-width: 1180px) and (max-width: 1439px) {
+  #main:has(> .topbar > .roadmap) > .frame:not(.frame--wide) {
+    padding-right: calc(var(--roadmap-w-compact) + var(--gutter));
+  }
+}

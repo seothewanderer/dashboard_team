@@ -1,0 +1,80 @@
+/* =========================================================
+   Roadmap Drone — progress line + rail drone (runtime: roadmap-drone.js)
+   Drawn inside the list container (which must be positioned) on the
+   same x-axis as the Roadmap Workflow nodes. The container's own
+   layout and text are not touched.
+   ========================================================= */
+.rm-track {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+/* Start segment (start anchor → first node): neutral like the other connectors. */
+.rm-track__start,
+.rm-track__progress {
+  position: absolute;
+  width: var(--rm-rail-w, 1px);
+  margin-left: calc(var(--rm-rail-w, 1px) / -2);
+  background: var(--rm-rail, color-mix(in srgb, var(--outline, #727272) 55%, transparent));
+}
+
+/* Progress: green line from the start to the drone's position (drawn while the drone flies). */
+.rm-track__progress {
+  --rm-progress-w: 2px;
+  z-index: 1;
+  width: var(--rm-progress-w);
+  margin-left: calc(var(--rm-progress-w) / -2);
+  border-radius: 1px;
+  background: var(--rm-on, var(--primary, #1DB954));
+}
+
+/* Drone: hovers beside the rail, level with its anchor (outside the list's left edge, in the host
+   gutter), so it never covers step text, cards, or the current node. */
+.rm-drone {
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 3;
+  width: 18px;
+  height: 12px;
+  margin: -6px 0 0 -9px;
+  color: var(--rm-on, var(--primary, #1DB954));
+  line-height: 0;
+}
+
+.rm-drone__bob {
+  display: block;
+  animation: rm-drone-bob 2.8s ease-in-out infinite;
+}
+
+.rm-drone__svg {
+  display: block;
+  overflow: visible;
+  transform-origin: 50% 55%;
+}
+
+.rm-drone__body {
+  fill: color-mix(in srgb, currentColor 22%, transparent);
+}
+
+.rm-drone.is-entering {
+  animation: rm-drone-in 320ms var(--ease-standard, ease) both;
+}
+
+@keyframes rm-drone-bob {
+  0%, 100% { transform: translateY(-1px); }
+  50% { transform: translateY(1px); }
+}
+
+@keyframes rm-drone-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rm-drone__bob,
+  .rm-drone.is-entering {
+    animation: none;
+  }
+}
