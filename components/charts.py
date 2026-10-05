@@ -20,6 +20,12 @@ from core.config import ROOT
 
 G = theme.CHART
 ROW_H, BAR_W = G["row_h"], G["bar_w"]
+OVERLAP_GAP = f"-{round((1 - G['overlap_shift']) * 100)}%"   # 겹친 막대의 두 번째(빨강) 막대 위치: 완전히 겹치지 않고 살짝 아래(요청 AB6)
+
+
+def overlap_w(w: int) -> int:
+    """겹친 막대 한 개의 굵기: 어긋난 두 막대를 합친 높이가 예전 막대 하나와 같게(요청 AB6 후속, 그래프 크기 유지)."""
+    return round(w / (1 + G["overlap_shift"]))
 
 CLICK_JS = "function(p){return {name: p.name, series: p.seriesName, t: Date.now()};}"
 
@@ -131,7 +137,9 @@ def _tooltip_js(unit: str, note: str = "") -> JsCode:
 
 
 def render(options: dict, key: str, height: int, on_click: Callable[[str], None] | None = None) -> None:
-    comp_key = f"{key}-{theme.mode()}"          # 테마가 바뀌면 새 테마로 다시 그림
+    # 테마가 바뀌면 새 테마로 다시 그림. 높이도 키에 넣음: 같은 키로 높이만 바뀌면 그림이 예전 높이 그대로 남아
+    # 카드 밖으로 넘침(요청 AG3에서 드러남 — 기업 탐색 공고 노출 막대 수가 줄 때)
+    comp_key = f"{key}-{theme.mode()}-{height}"
 
     def _clicked():
         event = (st.session_state.get(comp_key) or {}).get("chart_event")
@@ -146,15 +154,17 @@ def render(options: dict, key: str, height: int, on_click: Callable[[str], None]
 
 def hbar(categories: list[str], values: list[float], *, selected: list[str] | None = None,
          tiers: list[str | None] | None = None, highlight: bool = False, unit: str = "",
-         tooltip_note: str = "") -> tuple[dict, int]:
-    """가로 막대 + 14px 트랙 (DESIGN §11.3). 반환: (옵션, 높이)."""
+         tooltip_note: str = "", thin: bool = False) -> tuple[dict, int]:
+    """가로 막대 + 트랙 (DESIGN §11.3). 반환: (옵션, 높이).
+    thin = 얇은 막대(굵기 2/3, 줄 높이 row_h_thin — 03·04 얇은 막대와 같은 굵기, 요청 Y3)."""
+    bw, row_h = (BAR_W * 2 // 3, G["row_h_thin"]) if thin else (BAR_W, ROW_H)
     selected = selected or []
     total = sum(values) or 1
     order = {v: i + 1 for i, v in enumerate(sorted(set(values), reverse=True))}
     data = []
     for i, (cat, v) in enumerate(zip(categories, values)):
         tier = tiers[i] if tiers else None
-        style = {"borderRadius": BAR_W // 2, **defense_style(tier, highlight)}
+        style = {"borderRadius": bw // 2, **defense_style(tier, highlight)}
         if selected and tier is None and not highlight:
             style["color"] = c("chart-highlight") if cat in selected else c("chart-dim")
         data.append({"value": v, "name": cat, "share": round(v / total * 100, 1), "rank": order[v],
@@ -170,15 +180,15 @@ def hbar(categories: list[str], values: list[float], *, selected: list[str] | No
                   "data": [{"value": cat, "textStyle": {"fontWeight": 700, "color": c("text")} if cat in selected else {}}
                            for cat in categories]},
         "tooltip": {"trigger": "item", "formatter": _tooltip_js(unit, tooltip_note)},
-        "series": [{"type": "bar", "data": data, "barWidth": BAR_W, "showBackground": True, "cursor": "pointer",
-                    "backgroundStyle": {"color": c("chart-track"), "borderRadius": BAR_W // 2},
+        "series": [{"type": "bar", "data": data, "barWidth": bw, "showBackground": True, "cursor": "pointer",
+                    "backgroundStyle": {"color": c("chart-track"), "borderRadius": bw // 2},
                     "label": {"show": True, "position": "right", "color": c("text"), "fontWeight": 700,
                               "fontSize": theme.px("body")},
                     "emphasis": {"itemStyle": _glow(c("chart-highlight")),
                                  "label": {"color": c("chart-highlight")}},
                     "universalTransition": True}],
     }
-    return options, ROW_H * max(len(categories), 1) + 2 * G["pad"]
+    return options, row_h * max(len(categories), 1) + 2 * G["pad"]
 
 
 def stacked_hbar(categories: list[str], series: list[tuple[str, list[float], str]], *, unit: str = "",
@@ -233,7 +243,7 @@ def thin_split_hbar(categories: list[str], part: tuple[str, list[float]], rest: 
     """얇은 2구분 막대(요청 N10·N11, 04 직무): 합계(초록) 막대 위에 그중 방산(빨강 빗금)을 0부터 겹쳐 그림 —
     이어 붙이지 않아 빨강 끝도 둥글다(01 겹친 막대와 같은 방식). 트랙·굵기·끝 숫자 = 03과 같음."""
     selected = selected or []
-    bw, font = G["bar_w"] * 2 // 3, theme.px("caption")
+    bw, font = overlap_w(G["bar_w"] * 2 // 3), theme.px("caption")
     (pname, pv), (rname, rv) = part, rest
     totals = [a + b for a, b in zip(pv, rv)]
     dim = lambda k: {"opacity": G["dim"]} if selected and k not in selected else {}  # noqa: E731
@@ -244,7 +254,7 @@ def thin_split_hbar(categories: list[str], part: tuple[str, list[float]], rest: 
                      f"+'<br/>{pname} '+d.part.toLocaleString()+' {unit}<br/>{rname} '+d.rest.toLocaleString()+' {unit}'"
                      f"+'<br/>합계 '+d.total.toLocaleString()+' {unit}';}}")
     opt["xAxis"] = {"type": "value", "show": False, "max": max(totals, default=1) or 1}
-    base = {"type": "bar", "barWidth": bw, "barGap": "-100%", "cursor": "pointer"}
+    base = {"type": "bar", "barWidth": bw, "barGap": OVERLAP_GAP, "cursor": "pointer"}
     opt["series"] = [
         {**base, "name": rname, "z": 2, "showBackground": True, "backgroundStyle": {"color": c("chart-track"), "borderRadius": bw / 2},
          "itemStyle": {"color": grad(), "borderRadius": bw / 2},
@@ -335,7 +345,8 @@ def overlay_hbar(categories: list[str], totals: list[float], parts: list[float],
     끝 숫자 = 전체, 툴팁 = 전체·방산·방산 비율. 선택된 항목 외에는 옅게(선택은 축 글자 굵게도 표시)."""
     selected = selected or []
     dim = lambda cat: {"opacity": G["dim"]} if selected and cat not in selected else {}  # noqa: E731
-    base = {"barWidth": BAR_W, "cursor": "pointer", "barGap": "-100%"}
+    bw = overlap_w(BAR_W)
+    base = {"barWidth": bw, "cursor": "pointer", "barGap": OVERLAP_GAP}
     options = {
         "legend": _legend(),
         "grid": {"left": G["pad"], "right": G["value_gutter"], "top": 3 * G["pad"] + G["pad_sm"], "bottom": G["pad_sm"],
@@ -352,14 +363,14 @@ def overlay_hbar(categories: list[str], totals: list[float], parts: list[float],
             "+(t?Math.round(d/t*1000)/10:0)+'%'" + (f"+'<br/><span style=\"opacity:.7\">{note}</span>'" if note else "") + ";}")},
         "series": [
             {**base, "type": "bar", "name": total_name, "showBackground": True, "z": 2,
-             "backgroundStyle": {"color": c("chart-track"), "borderRadius": BAR_W // 2},
-             "itemStyle": {"color": grad(), "borderRadius": BAR_W // 2},
+             "backgroundStyle": {"color": c("chart-track"), "borderRadius": bw // 2},
+             "itemStyle": {"color": grad(), "borderRadius": bw // 2},
              "label": {"show": True, "position": "right", "color": c("text"), "fontWeight": 700, "fontSize": theme.px("body")},
              "emphasis": {"itemStyle": _glow(c("chart-highlight"))},
              "data": [{"value": t, "name": cat, "total": t, "part": p, "itemStyle": dim(cat)}
                       for cat, t, p in zip(categories, totals, parts)]},
             {**base, "type": "bar", "name": part_name, "z": 3,
-             "itemStyle": {"color": dgrad(), "decal": _decal(), "borderRadius": BAR_W // 2},
+             "itemStyle": {"color": dgrad(), "decal": _decal(), "borderRadius": bw // 2},
              "label": {"show": True, "position": "insideRight", "color": c("on-defense"), "fontWeight": 700,
                        "fontSize": theme.px("label"),
                        # 빨강 부분이 충분히 길 때만 숫자(가장 긴 막대의 12% 이상) — 짧으면 툴팁에서 확인
@@ -421,7 +432,7 @@ def _seq_map(vmax: float, dimension: int | None = None) -> dict:
 
 def heatmap(x: list[str], y: list[str], matrix: list[list[int]], *, unit: str = "",
             selected_y: str | None = None, selected_x: str | None = None, click_x: bool = False,
-            rotate_x: int = 0) -> tuple[dict, int]:
+            rotate_x: int = 0, x_font: int | None = None) -> tuple[dict, int]:
     """순차(한 색상) 히트맵. 셀 값 라벨, 호버 시 테두리·글로우.
     click_x: 셀 클릭 시 열(x) 이름을 넘긴다(요청 H6: 활용 분야 셀 → 과제 목록). selected_x 열은 테두리로 표시."""
     sel = {"borderColor": c("text"), "borderWidth": G["stroke"] + 1}
@@ -430,7 +441,8 @@ def heatmap(x: list[str], y: list[str], matrix: list[list[int]], *, unit: str = 
     vmax = max((v for row in matrix for v in row), default=1)
     options = {
         "grid": {"left": G["pad"], "right": G["pad"], "top": G["pad"], "bottom": G["pad"], "containLabel": True},
-        "xAxis": {"type": "category", "data": x, "position": "top", "axisLabel": {"interval": 0, "rotate": rotate_x}},
+        "xAxis": {"type": "category", "data": x, "position": "top",
+                  "axisLabel": {"interval": 0, "rotate": rotate_x, **({"fontSize": x_font} if x_font else {})}},   # x_font = 열 이름 글자(요청 AL)
         "yAxis": {"type": "category", "inverse": True,
                   "data": [{"value": v, "textStyle": {"fontWeight": 700, "color": c("text")}} if v == selected_y else v
                            for v in y]},

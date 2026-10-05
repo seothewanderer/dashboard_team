@@ -1,0 +1,206 @@
+﻿기술,연결표의 한글명
+NASTRAN,NASTRAN 관련 기술
+Radar,Radar 관련 기술
+Radiometric Calibration,Radiometric Calibration 관련 기술
+Payload,Payload 관련 기술
+Edge Computer,Edge Computer 관련 기술
+GPU,GPU 관련 기술
+HALT,HALT 관련 기술
+Boresight,Boresight 관련 기술
+PPS,PPS 관련 기술
+Lean,Lean 관련 기술
+Pixhawk,Pixhawk 관련 기술
+NCR,NCR 관련 기술
+Pack,Pack 관련 기술
+Blade Element,Blade Element 관련 기술
+DC/DC,DC/DC 관련 기술
+PEMFC,PEMFC 관련 기술
+C2,C2 관련 기술
+IP Network,IP Network 관련 기술
+OTA,OTA 관련 기술
+Remote ID,Remote ID 관련 기술
+5G/LTE,5G/LTE 관련 기술
+Mesh,Mesh 관련 기술
+QoS,QoS 관련 기술
+HIL,HIL 관련 기술
+Recurrent Training,Recurrent Training 관련 기술
+Regulation,Regulation 관련 기술
+e-Learning,e-Learning 관련 기술
+Video,Video 관련 기술
+VR,VR 관련 기술
+Curriculum,Curriculum 관련 기술
+Instructional Design,Instructional Design 관련 기술
+Administration,Administration 관련 기술
+Safety,Safety 관련 기술
+Training Ops,Training Ops 관련 기술
+Lab,Lab 관련 기술
+Research,Research 관련 기술
+Teaching,Teaching 관련 기술
+Practical Test,Practical Test 관련 기술
+Standardization,Standardization 관련 기술
+Diagnostics,Diagnostics 관련 기술
+Maintenance Training,Maintenance Training 관련 기술
+Flight Training,Flight Training 관련 기술
+Instruction,Instruction 관련 기술
+Evaluation,Evaluation 관련 기술
+Instructor Pilot,Instructor Pilot 관련 기술
+Experiment,Experiment 관련 기술
+Publication,Publication 관련 기술
+SI,SI 관련 기술
+ArduPilot,ArduPilot 관련 기술
+Customer Success,Customer Success 관련 기술
+Support,Support 관련 기술
+Training,Training 관련 기술
+Acceptance,Acceptance 관련 기술
+Procurement,Procurement 관련 기술
+Export,Export 관련 기술
+ICAO,ICAO 관련 기술
+International Project,International Project 관련 기술
+Aviation Law,Aviation Law 관련 기술
+Compliance,Compliance 관련 기술
+Privacy,Privacy 관련 기술
+Claims,Claims 관련 기술
+Risk,Risk 관련 기술
+Underwriting,Underwriting 관련 기술
+Market Analysis,Market Analysis 관련 기술
+Statistics,Statistics 관련 기술
+Survey,Survey 관련 기술
+Demonstration,Demonstration 관련 기술
+Stakeholder,Stakeholder 관련 기술
+Inventory,Inventory 관련 기술
+Rental,Rental 관련 기술
+Retail,Retail 관련 기술
+Event PM,Event PM 관련 기술
+Vendor,Vendor 관련 기술
+Policy Analysis,Policy Analysis 관련 기술
+Business Model,Business Model 관련 기술
+Funding,Funding 관련 기술
+ASTM,ASTM 관련 기술
+ISO,ISO 관련 기술
+KS,KS 관련 기술
+Battery,Battery 관련 기술
+Fire Safety,Fire Safety 관련 기술
+Analysis,Analysis 관련 기술
+Flight Test,Flight Test 관련 기술
+Customer Support,Customer Support 관련 기술
+Repair,Repair 관련 기술
+Test Pilot,Test Pilot 관련 기술
+Reliability,Reliability 관련 기술
+Engine,Engine 관련 기술
+Motor,Motor 관련 기술
+Propulsion,Propulsion 관련 기술
+Avionics,Avionics 관련 기술
+Wiring,Wiring 관련 기술
+Airworthiness,Airworthiness 관련 기술
+Safety Analytics,Safety Analytics 관련 기술
+Aviation Regulation,Aviation Regulation 관련 기술
+Permit,Permit 관련 기술
+Risk Assessment,Risk Assessment 관련 기술
+Safety Case,Safety Case 관련 기술
+Accident Investigation,Accident Investigation 관련 기술
+Flight Log,Flight Log 관련 기술
+ATC Coordination,ATC Coordination 관련 기술
+Test Range,Test Range 관련 기술
+Audit,Audit 관련 기술
+Hazard,Hazard 관련 기술
+Calibration,Calibration 관련 기술
+Lab Equipment,Lab Equipment 관련 기술
+Test,Test 관련 기술
+Certification,Certification 관련 기술
+Report,Report 관련 기술
+Test Plan,Test Plan 관련 기술
+Dispatch,Dispatch 관련 기술
+Weather,Weather 관련 기술
+Visual Observation,Visual Observation 관련 기술
+Operations,Operations 관련 기술
+Mission Planning,Mission Planning 관련 기술
+Telemetry,Telemetry 관련 기술
+Mission,Mission 관련 기술
+Sensor,Sensor 관련 기술
+Fleet Control,Fleet Control 관련 기술
+Detect-and-Avoid,Detect-and-Avoid 관련 기술
+Spraying,Spraying 관련 기술
+Seeding,Seeding 관련 기술
+Variable Rate,Variable Rate 관련 기술
+Evidence,Evidence 관련 기술
+Gas Sensor,Gas Sensor 관련 기술
+Pest Monitoring,Pest Monitoring 관련 기술
+Forest GIS,Forest GIS 관련 기술
+Incident Command,Incident Command 관련 기술
+Thermal,Thermal 관련 기술
+Ecology,Ecology 관련 기술
+Pollination,Pollination 관련 기술
+Agronomy,Agronomy 관련 기술
+Detection,Detection 관련 기술
+Environmental Sensor,Environmental Sensor 관련 기술
+Sampling,Sampling 관련 기술
+Public Safety,Public Safety 관련 기술
+Perimeter Patrol,Perimeter Patrol 관련 기술
+Security,Security 관련 기술
+ISR,ISR 관련 기술
+C-UAS,C-UAS 관련 기술
+RF Safety,RF Safety 관련 기술
+Systems Integration,Systems Integration 관련 기술
+Counter-UAS,Counter-UAS 관련 기술
+Data QA,Data QA 관련 기술
+Meteorology,Meteorology 관련 기술
+Fleet,Fleet 관련 기술
+Logistics,Logistics 관련 기술
+Loss Assessment,Loss Assessment 관련 기술
+Grid Search,Grid Search 관련 기술
+Drone Station,Drone Station 관련 기술
+Maintenance,Maintenance 관련 기술
+Remote Ops,Remote Ops 관련 기술
+Chain of Custody,Chain of Custody 관련 기술
+Cold Chain,Cold Chain 관련 기술
+Barcode,Barcode 관련 기술
+Indoor Flight,Indoor Flight 관련 기술
+WMS,WMS 관련 기술
+Marine Pollution,Marine Pollution 관련 기술
+Long-range,Long-range 관련 기술
+Fireground,Fireground 관련 기술
+ICS,ICS 관련 기술
+Incident Response,Incident Response 관련 기술
+AIS,AIS 관련 기술
+Maritime Ops,Maritime Ops 관련 기술
+360 Camera,360 Camera 관련 기술
+Storyboard,Storyboard 관련 기술
+Composition,Composition 관련 기술
+Racing,Racing 관련 기술
+Tuning,Tuning 관련 기술
+Swarm Ops,Swarm Ops 관련 기술
+Field Ops,Field Ops 관련 기술
+Drone Soccer,Drone Soccer 관련 기술
+Team Tactics,Team Tactics 관련 기술
+Coaching,Coaching 관련 기술
+Manual Flight,Manual Flight 관련 기술
+Construction,Construction 관련 기술
+Volume,Volume 관련 기술
+Defect,Defect 관련 기술
+Inspection,Inspection 관련 기술
+Mine Safety,Mine Safety 관련 기술
+Structural Inspection,Structural Inspection 관련 기술
+Linear Inspection,Linear Inspection 관련 기술
+3D,3D 관련 기술
+Heritage,Heritage 관련 기술
+Confined Space,Confined Space 관련 기술
+Gas Safety,Gas Safety 관련 기술
+Power Safety,Power Safety 관련 기술
+Zoom,Zoom 관련 기술
+Cadastral,Cadastral 관련 기술
+Surveying,Surveying 관련 기술
+PV,PV 관련 기술
+Reporting,Reporting 관련 기술
+Pipeline,Pipeline 관련 기술
+Blade Inspection,Blade Inspection 관련 기술
+Hydrology,Hydrology 관련 기술
+Swarm,Swarm 관련 기술
+Digital Twin,Digital Twin 관련 기술
+IoT,IoT 관련 기술
+Simulation,Simulation 관련 기술
+SITL,SITL 관련 기술
+Unreal,Unreal 관련 기술
+Show Control,Show Control 관련 기술
+MVS,MVS 관련 기술
+Global Mapper,Global Mapper 관련 기술
+Streaming,Streaming 관련 기술

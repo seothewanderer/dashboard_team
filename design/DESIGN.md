@@ -84,7 +84,7 @@ Token names are the CSS custom properties injected by `core/theme.py`. The same 
 | `--surface` | `#181818` (source Surface) | Level 1: cards, chart cards, KPI tiles, right panel |
 | `--surface-2` | `#282828` (source Level 2 / Border) | Hover state of Level 1, inputs, chips, tooltips, menus |
 | `--surface-3` | `#333333` (source Level 3) | Dialogs |
-| `--border` | `#282828` (source) | Subtle dividers only |
+| `--border` | `#282828` (source) | Table (AgGrid) grid lines only. Every other line uses `--outline` since AB9 (removal in AH reverted 2026-10-05: still used by `components/tables.py`) |
 | `--text` | `#FFFFFF` (source Text Primary) | Titles, values |
 | `--text-2` | `#A7A7A7` (source Text Secondary) | Metadata, captions, axis labels |
 | `--text-3` | `#B3B3B3` (source Neutral) | Body copy, inactive nav |
@@ -107,7 +107,7 @@ Token names are the CSS custom properties injected by `core/theme.py`. The same 
 | `--surface` | `#FFFFFF` (derived) | Cards and panels, measured |
 | `--surface-2` | `#F3F4F5` (derived) | Hover, inputs, chips |
 | `--surface-3` | `#FFFFFF` (derived) | Dialogs (with a shadow, since white-on-light cannot use brightness) |
-| `--border` | `#E5E2E1` (derived) | Measured |
+| `--border` | `#E5E2E1` (derived) | Table grid lines only (removal reverted 2026-10-05) |
 | `--text` | `#121212` (derived) | |
 | `--text-2` | `#6B6B6B` (changed) | The md's `#A7A7A7` is 2.41:1 on white; `#6B6B6B` is 5.33:1 |
 | `--text-3` | `#3A3A3A` (derived) | Body copy |
@@ -168,10 +168,10 @@ Base 8px. Scale 4, 8, 12, 16, 24, 32, 48, 64. Component padding 16 (24 for secti
 
 | Area | Value | Note |
 |---|---|---|
-| Left sidebar | 240px (source), `--sidebar-bg` | Menu font 17/700 fits "04 채용·기업 탐색" on one line (measured 123px text in a 176px item). Every menu item (홈 ~ 04) is 44px high with a 48px pitch (user request) |
-| Top bar | 56px, on `--bg` (derived) | Service name · current screen · scrap count · roadmap toggle. No black band |
-| Centre | fluid; container max 1600 incl. panel | 32px side margins |
-| Right roadmap panel | 260px, `--surface`, 12px radius (derived from the screenshot's right column; 240 below 1440px) | |
+| Left sidebar | 240px (source), `--sidebar-bg` | Menu font 17/700 fits "04 채용·기업 탐색" on one line (measured 123px text in a 176px item). Every menu item (홈 ~ 04) is 44px high with a 48px pitch (user request). Fixed at 768px and wider: no collapse/expand button and no slide; a collapsed state saved by Streamlit is ignored (user request AA3, 2026-10-03, Proposed). Below 768px, Streamlit's default open/close stays |
+| Top bar | 56px, on `--bg` (derived) | Service name · current screen · scrap count · roadmap toggle. No black band. **While the roadmap is open (user request AA4, Proposed):** the row is split. The title and its bottom divider sit over the centre column only, so the divider stops where the roadmap column starts. The toggle sits alone, right-aligned, above the roadmap panel, with no divider. That button row is not sticky. Home shows only this button row, with no title. **Open/close (AA7, 2026-10-03, Proposed):** the layout is the same in both states, so the page is not rebuilt and does not flash. The toggle (a `components.v2` button styled like the old tertiary button) sets `html[data-roadmap]` at once in the browser, then tells Python only so the state is saved. Closing animates the roadmap column to width 0 and the gutter to 0, and widens the centre max width to 1600 − 2×32 (1536px). The panel keeps its width and is clipped from its left edge, so it looks as if it slides out to the right. It is hidden only after the slide ends; opening reverses this. Duration `--duration-slide` (300ms), `--ease-standard`. The motion runs only on a click: a reload or a restored state is applied instantly, and reduced motion means no transition. The toggle sits at the top right of the row in both states, so it does not move. Below 768px it floats at the top right, the title row leaves room for it and wraps, and a closed roadmap is not shown at all |
+| Centre | fluid; container max 1600 incl. panel | 32px side margins. **While the roadmap is open (AA4, Proposed):** the container has no max width, so the roadmap column sits at the right edge of the screen. The centre content keeps its old width, `--main-max` = 1600 − 2×32 − 24 − 260 (1252px), and is centred in the space between the sidebar and the roadmap |
+| Right roadmap panel | 260px, `--surface`, 12px radius (derived from the screenshot's right column; 240 below 1440px) | Sticky at `--space-md` from the top (the panel's wrapper is sticky; the button row above it scrolls away) |
 | Grid gap | 24px | |
 
 ## 7 Components
@@ -182,7 +182,7 @@ Base 8px. Scale 4, 8, 12, 16, 24, 32, 48, 64. Component padding 16 (24 for secti
 - **Chips / pills**: pill, `--surface-2` background, `--text`, 14/400, 4px 12px padding. Selected: `--select-bg` / `--select-fg`.
 - **Checkboxes / toggles**: unchecked 1px `--outline` border; checked `--primary` fill.
 - **Tooltips**: `--tip-bg`, `--tip-fg`, 4px radius, 8px 12px padding, 12px, shadow `0 4px 12px rgba(0,0,0,0.4)`.
-- **Navigation**: sidebar links `--text-3` 17/700, all items 44px high (`--nav-item-h`). *Proposed (not in source), user requests D1–D3:* the service name at the top is 22/800 (`--font-brand`) with a 12px `--primary` dot ringed in `--accent-soft` and a 1px `--border` rule below it; menu numbers sit in a fixed 36px column (`--nav-no-w`) at 19/800 with tabular figures so every name starts at the same x; the home item puts a 22px house icon (`--nav-icon`) in that column, drawn as a mask in the text colour — at rest the first frame, on hover it plays flat → 3D once and holds the 3D frame. Hover `--text` on `--surface-2`; active `--text` on `--accent-soft` with a 3px `--primary` left bar (derived from the screenshot's active pill).
+- **Navigation**: sidebar links `--text-3` 17/700, all items 44px high (`--nav-item-h`). *Proposed (not in source), user requests D1–D3:* the service name at the top is 22/800 (`--font-brand`) with a 12px `--primary` dot ringed in `--accent-soft` and a 1px `--border` rule below it (AH, 2026-10-04: the dot is now the service logo at `--logo-sidebar` 26px and the rule is `--outline`); menu numbers sit in a fixed 36px column (`--nav-no-w`) at 19/800 with tabular figures so every name starts at the same x; the home item puts a 22px house icon (`--nav-icon`) in that column, drawn as a mask in the text colour — at rest the first frame, on hover it plays flat → 3D once and holds the 3D frame. Hover `--text` on `--surface-2`; active `--text` on `--accent-soft` with a 3px `--primary` left bar (derived from the screenshot's active pill).
 - **Badges**: 2px radius (source "small badges"), 11/700. Neutral = `--surface-2`/`--text`; defense = §9.
 - **Search** (text inputs used as search): pill, `--surface-2`.
 
@@ -233,7 +233,7 @@ Terminology: **Defense** = records classified by `plan.md` §6.4 as *direct* (�
 
 - **Dim, don't hide**: ON keeps defense marks at full colour and turns general marks `--chart-muted`. Counts, axes and order never change.
 - Control: pill toggle. OFF = chip style (`--surface-2`, `--text`); ON = `--defense-strong` fill, white text, label `방산 강조 켜짐`. A status line `방산 강조 중 · 건수는 바뀌지 않습니다` shows while ON.
-- Scope: charts (above), KPI tiles and cards (defense = 2px orange border, solid/dashed by tier, + badge; general = muted text), tables (defense rows marked with the badge). Tooltips and dialogs stay unchanged. Controls, counts and sort order are never affected.
+- Scope: charts (above), KPI tiles and cards (defense = 2px orange border, solid/dashed by tier, + badge; general = muted text), tables (defense rows marked with the badge). Tooltips and dialogs stay unchanged. Controls, counts and sort order are never affected. (Changed by user request AD1, 2026-10-04: in card lists only, a highlight now moves the related cards to the front. Goal-related cards come first, then defense; each group keeps its order. Chart order and counts are still unchanged.)
 - Transition: colour only, `--duration-base`; instant under reduced motion.
 
 ## 10 Motion and hover
@@ -243,7 +243,6 @@ Terminology: **Defense** = records classified by `plan.md` §6.4 as *direct* (�
 | Hover scale 1.04 (source) | buttons, home entry buttons, KPI tiles | 150ms `--ease-standard` |
 | Card hover | cards, chart cards | surface one level up + 2px lift, 200ms (source 200ms ease) |
 | Nav hover / active | sidebar | colour and background 150ms |
-| Sidebar show/hide (user request) | sidebar | slides in/out from the left, 300ms `--ease-standard` (width stays fixed) |
 | Chart entry / update | ECharts | 500ms / 300ms `cubicOut` (kept) |
 | Chart hover emphasis | ECharts | highlight colour + glow on the hovered mark only (§8) |
 | Number count-up | KPI tiles | 900ms cubic ease-out (kept) |
@@ -373,6 +372,150 @@ So when red is used for defense:
 - **Roadmap steps (F9):** a step holding items uses the sidebar active style (`--accent-soft` plus a 3px `--primary` inset bar).
 - **Side-by-side chart cards:** fill the row height, so neighbouring cards line up.
 
+### 12.25 AU (2026-10-05) — card folds stay open when paging
+
+- **Problem:** after a card fold was opened by code (a chip or chart pick), the content above it sometimes changed (for example the 01 heatmap appears). Streamlit then remounted the fold, and the browser kept its old "closed" value. The next click inside the fold (이전/다음, N개씩 보기, …) sent that value and the fold closed.
+- **Rule:** all five card folds use `filters.card_fold(label, key)`. When the open state was changed by code rather than by the user, the label gets or loses one invisible U+200B so the fold becomes a new widget without the stale value. The visible title, the `st-key-*` class and manual open/close are unchanged.
+
+### 12.24 AR·AS·AT (2026-10-05)
+
+- **Goal highlight per page (AR):** '목표 직무 관련 강조' is a separate toggle on each page (`goal_toggle(page)`, keys `hl_goal_learning` / `_postings` / `_companies`). It starts off on every visit. Turning it on in one page no longer carries over. The card frame state `ui.highlight_goal` is set from the page being drawn.
+- **기업 탐색 함께 하는 분야 (AS):** clicking a bar in '함께 하는 분야' no longer replaces the left area selection. It narrows the company cards to companies that do the left area and every clicked co-area (AND). Clicked bars are highlighted. Clicking again removes it, and changing the left area clears it. The card row shows '함께 하는 분야: X ✕'. The result line reads 'A · B 모두 하는 곳'. The graphs and C04 are unchanged.
+- **Reset buttons (AT):** a gray caption '초기화' text button (no border or background) clears one scrap kind (학습 내용 / 채용 공고 / 관심 기업; the 목표 직무 is not included).
+  - **Placement:** at the right end of the step's '→ 살펴보기' line, just under the fold button. On the title line, '채용 공고 스크랩 3/3' + fold + reset ran 31px past the panel.
+  - **내 조건:** has the same reset on the right of its title, clearing 학력·경력·희망 지역.
+  - **Measured at 1920px:** reset 1818–1854px inside the panel's inner edge (1862px), no overlap with the fold buttons.
+
+### 12.23 AP (2026-10-05) — table height fits content
+
+- `tables.table`: the height is estimated in Python from text length, covering wrapped long text (`_est_height`: characters × 14px ÷ column width = lines, 21px per line, up to `max_rows` rows). Rows beyond `max_rows` scroll inside the table.
+  - AQ, 2026-10-05: the first attempt used AG Grid auto height (`height=None`). Inside dialogs the iframe height sometimes stayed 0, so the table vanished, so it was replaced.
+- Example: the company dialog's 국방·연구·납품 근거 table now grows to 189px (header + one 134px wrapped row) instead of a 36px row with scrollbars. The same applies to the posting dialog's '내 조건과 비교', the 채용 현황 comparison table, and '표로 보기' tables of 10 rows or fewer.
+
+### 12.22 AO (2026-10-05) — tables under zoom, horizontal scroll
+
+- **Cause:** with the monitor zoom on, Streamlit writes component iframe widths (AgGrid tables) in zoomed screen px. The width got zoomed twice (1586 → 2010px), so the right side of '선택한 직무와 스크랩한 공고 비교' ran under the roadmap panel.
+- **Fix:** `iframe[data-testid="stCustomComponentV1"] { width: 100% }` keeps each iframe within its column.
+- **Table changes:**
+  - Header names wrap (`wrapHeaderText`, `autoHeaderHeight`), so long posting titles are no longer cut with "…".
+  - `tables.table(min_col_w=…)`: the comparison table uses 300px. When the columns (item + up to 3 postings) are wider than the table, AG Grid's horizontal scrollbar appears at the bottom.
+- **Measured:** at 1280px the table is 702px wide with 900px of content, and the scrollbar shows. At 1920/2560px with 3 postings everything fits (4 × 300 = 1200 ≤ 1252).
+
+### 12.21 AM·AN (2026-10-05)
+
+- **02 keyword filter (AM):**
+  - The J05 section is titled '직무 키워드와 보유 기술로 필터링'.
+  - Choosing a keyword (frequent pills or the full search) no longer opens a second card grid. It filters the '직무 카드 보기' expander above, together with search, 하는 일, 대분류·중분류 and '방산 관련만 보기'. It also opens that expander and scrolls to it.
+  - The card row shows a secondary '키워드: X' button with a close icon that clears the filter.
+  - The J05 section keeps only a blue line notice (how many jobs match, applied to the cards above). The network graph is unchanged.
+- **Small gray text inside chips and buttons (AN):** `:small[:gray[…]]` inside pills and buttons (03 skill original names, keyword course counts, dialog skill buttons) inherits the button colour at 0.6 opacity. Streamlit's gray is fixed, so it disappeared on the inverted selected chip and in the light theme.
+
+### 12.20 AL (2026-10-05) — 01 활용 분야 heatmap labels
+
+- The 활용 분야 column names above the '기술 × 활용 분야' heatmap (shown after a technology is chosen on 01) are horizontal on one line, not tilted 30°. They use the label font size (`theme.px("label")`, one step smaller than the axis caption), passed through the new `heatmap(x_font=...)` option. The extra height for tilted labels (`heat_extra`) is no longer added.
+- One line fits when the main column is 1252px (1920px, or 2560px with zoom). Below about 1440px the longest names nearly touch.
+
+### 12.19 AK (2026-10-05) — 03 채용 키워드 그래프
+
+- The S03 '수집 공고에서 언급된 기술' bars use the thin bar (`hbar(thin=True)`): 12 rows = 376px.
+- The '분류' selector (`s03_cat`) wraps to two lines, so its background is a rounded rectangle (`--radius-lg`) around the buttons only, instead of the full-radius pill. The label '분류' sits above it, outside the box. Selected button styling is unchanged. This applies to this selector only.
+
+### 12.18 AJ fix (2026-10-05) — floating lists under monitor zoom
+
+- **Problem:** with the AE3 zoom on (window wider than 2020px), selectbox and multiselect lists and help tooltips opened down and to the right of their box (for example '5개씩 보기' on 02). Streamlit places these floating layers at `position: fixed` using screen pixels, then measures and corrects. Inside the zoomed `html` the position was scaled a second time.
+- **Fix (`static/css/base.css`):** every inline `position: fixed` element except `canvas` gets `zoom: calc(1 / var(--app-zoom))`, so its CSS px equal screen px. Its direct children get `zoom: var(--app-zoom)`, so the text stays the same size as the rest of the app.
+- **Verified at 2560px (zoom 1.267):**
+  - Lists open directly under their box at the same width: 02 '5개씩 보기', '전체 키워드에서 찾기', the '직무·기술 검색' search box, and the 내 조건 '희망 지역' multiselect.
+  - The help tooltip keeps the same position relative to its icon as at 1920px.
+- The share copy uses native browser lists, so it is not affected.
+
+### 12.17 AI-round (user requests 2026-10-05) — Proposed (not in source)
+
+- **채용 현황 employment-type bars (AI1):** they use the thin bar (`hbar(thin=True)`, the same as the 경력·학력 bars), so the chart is shorter (7 rows: 226px).
+- **Shared defense-only toggle (AI2):** the card row of '공고 카드 보기' has its own '방산 관련 기업만 보기' (red pill toggle) to the left of '목표 직무 관련 강조'. It shares one state with the toggle in the 공고 조건 row: turning either on or off changes both, plus the graphs and cards.
+- **Footer team block (AI3):** it fills the first column's free space and is centred vertically.
+  - The logo is `--logo-footer` 64px (was 36px).
+  - To its right, the team name '보여들이조' sits on top in `--font-section-title` (bold, larger, `--text`).
+  - The members '서증표 · 안성준 · 허경 · 방수진' sit below in the footer list style (`--font-caption`, `--text-3`).
+- **`--border` kept:** the AH removal is reverted because the table (AgGrid) grid colour in `components/tables.py` still reads it. A test now covers that table.
+
+### 12.16 AH-round (user requests 2026-10-04: logo, cleanup, share v6) — Proposed (not in source)
+
+- **Service logo (AH).** The user's image (three rising bars with a drone above the tallest), redrawn as a centred 48×48 SVG in `core/logo.py`. The two short bars and the drone use `--text`, the tall bar uses `--primary`, so it follows the theme. It is drawn as a CSS background from `--logo-img` (a data URI built per theme in `theme.inject_css`), because `st.html` strips inline SVG.
+  - **Sizes (Proposed):** `--logo-topbar` 28px left of the top-bar wordmark (4px gap), `--logo-sidebar` 26px in place of the old green dot, `--logo-home` 88px left of the home title and description (it matches their combined height; 48px on phones), `--logo-footer` 36px next to the team name.
+  - The sidebar name still fits at 22px with the logo, so its font size is unchanged.
+- **Footer (AH).** The first column's label is '드론 진로 탐색 서비스'. Below its list sits the logo plus the team name '보여들이조' (card-title font). The other empty space is left blank for now, per the user.
+- **One-line notice box (AH).** `note(box=True, small=True)` sets the box text to `--font-caption`. On 03 the keyword explanations use it, and their wording is shortened to terse 개조식 so each fits one line at 1920px.
+- **Cleanup (approved).**
+  - Removed: unused CSS (`.roadmap-step__state--set`, `.st-key-chart-card-J01 .chart-card__footer`, the overridden `.page-intro` box, `.status-line`, `.chart-card__subhead`, `.hm-note`) and the `--border` token (the token removal was reverted on 2026-10-05: `components/tables.py` still uses it for the table grid).
+  - Removed: `module_meta.caption()`, the 03 '공식 참고자료' expander (same as the '공식 문서' group), the sidebar 이용 안내 third line, and the home footnote. The last two moved to the footer.
+- **Share v6 (`html/v6_수정본_2026-10-04.html`).** Every change from AA to AH is ported to the JavaScript share.
+  - **Layout and roadmap:** frame, roadmap and toggle, logo, footer, TOC, blue notices, '그래프 해설' with the same insight calculation (`scripts/interactive/insights.js` mirrors `analytics/insights.py`), card rows and page sizes, related-first order, overlapping bars, 03 flow, 기업 탐색 layout, 02 grow effect, and monitor zoom.
+  - **Rendering match:** spacing was copied from the app by measuring at 1920px: the 16px top padding, the 14px (1rem) gap between Streamlit elements, the sidebar's 32px side padding and 83px top offset, the 33px expander header, and the roadmap step height. Positions now match within about 4px.
+
+### 12.15 AG-round (user requests 2026-10-04: footer, 03 flow, 기업 탐색 layout) — Proposed (not in source)
+
+- **Footer (AG1, option A).** Rendered by `components/footer.py` at the bottom of the main column on every page (not under the roadmap). A 1px `--outline` line above it, `--space-xxl` top margin.
+  - **Next step (top layer):** one full-width card button (`--surface`, `--card-border-w` `--control` border, `--primary` border on hover, `--radius-md`). It holds three lines: '다음 단계' (caption, `--text-2`), the page name with an arrow (card title, name in `--primary`), and a one-line description. The order is home → 01 → 02 → 03 → 04 채용 현황 → 04 기업 탐색. The last page has no card, and the static share leaves it out.
+  - **Three columns (bottom layer):** 이 서비스 / 데이터 출처 · 기준일 / 이용 주의 · 용어. Each has a label (`--font-label`) over a caption-size list in `--text-3` with bold names in `--text-2`. They become one column at 1024px and below. The text lives in `content/footer.py`.
+  - **Bottom line:** © · version · update date · font and library licences, in caption `--text-3`, with a 1px `--outline` line above it.
+- **03 내 직무 준비 (AG2).** Skill chips show the Korean name with the original name small and gray (`:small[:gray[…]]`). Skills with no Korean name (stored as 'X 관련 기술') show the original. Resources are split into 직접·포함 / 기초 참고 / 공식 문서. Choosing a skill no longer changes the map or course list. A secondary button '이 기술 관련 교육 찾기 · N개 더' (`arrow_downward`) hands the skill over and scrolls to the map. If there are no extra courses, a line notice replaces the button. The 02 job dialog's skill buttons use the same labels.
+- **기업 탐색 layout (AG3, option A).** The 분야 chips sit outside the cards, full width under the filter bar, with a `.filter-label` '분야'. The left column holds only the 분야 graph card. The right column holds 채용 공고 노출 and, when an area is chosen, a separate '함께 하는 분야' card (`chart-card-cooc`, the same card look). Measured at 1600px with 방역/방제/살포 chosen: left 1098px vs right 1084px (before: 1373px vs about 450px of content).
+- **Chart height (AG3 fix).** `charts.render` puts the height in the component key, so a chart is redrawn when its height changes. Before this, the drawing kept its old height and spilled out of the card.
+
+### 12.14 AF-round (user feedback 2026-10-04) — Proposed (not in source)
+
+- **Chart explanation wording (AF1):** '그래프 해설' is written in terse 개조식 (noun endings, `=`, `→`, `≠`), content first rather than a friendly tone. Section labels: 내용 / 주요 수치 · 현재 조건 기준 / 읽는 법 · 주의 / 기준. List text uses `--font-caption` (was body).
+- **Scroll area under zoom (AF2):** Streamlit's main scroll area (`stMain`, `height: 100dvh`) is set to `calc(100dvh / var(--app-zoom, 1))`. Without that, the zoomed area is taller than the window and the page bottom is cut off on every page.
+- **Zoom reference width (AF3):** `theme.ZOOM.base` changes from 1920 to 2020, so a 2560 window is scaled 1.27× (between the user's browser 80% ≈ 1.2× and 100% ≈ 1.33×). Windows of 2020px and below, including the school 1920 monitor, are unchanged.
+- **Roadmap '내 조건' (AF4):** the title drops the empty number column and lines up with the panel's left edge. Its notice is one line (`white-space: nowrap`, text shortened to '공고 상세 “내 조건과 비교”·교육 정렬에 사용').
+
+### 12.13 AE-round (user requests 2026-10-04: notices, chart explanations, monitor sizes) — Proposed (not in source)
+
+- **Blue notices (AE1).** Text that explains something to the user uses one look: `--note-fg` text with the user's exclamation icon (`static/img/note_icon.png`, a mask, `--note-icon-size` 14px).
+  - **Box** (`components.note(box=True)`): `--note-bg` panel, 8px radius, body text. Used for longer notices: the sidebar context card ('지금 보는 데이터' / '이용 안내', icon before the title), empty results ('조건에 맞는 … 없습니다'), the 03 guidance before a goal job is chosen, the 03 keyword explanations, and the dialog's 'no details'. The 채용 현황 comparison notes also get the icon.
+  - **Line** (`note()`): caption-size blue text plus a small icon. Used for chart and filter how-to lines, status lines (강조 중 …), the 02 hint '대분류를 먼저 선택하세요', interpretation cautions ('점수·적합도가 아닙니다' and the like), the 내 조건 description and the home footnote.
+  - **Not included:** data captions (axis units, source lines in dialogs, the card note '원문 링크 미수집') stay gray.
+- **Chart explanation (AE2).** The '근거 자세히' expander is replaced by '그래프 해설', collapsed by default. It holds bullet lists in four parts:
+  - **무엇을 보여 주나요:** one sentence.
+  - **눈에 띄는 점 · 지금 조건 기준:** computed from the chart's own table by `analytics.insights` (top item with ties, top-3 share or share of the sample when items overlap, runner-up, highest defense share among items with at least 5). No good/bad judgement.
+  - **이렇게 읽어요:** how to read the chart plus the cautions from `limitation`, rewritten in plain language.
+  - **기준:** sample and denominator, unit, as-of date, source, applied filters, excluded high-missing columns.
+  - The '표로 보기' table stays inside. The always-visible line under the chart is now '표본 n · 기준 {as-of} · 출처 {short source}'. The text lives in `content/chart_explain.EXPLAIN`.
+- **Monitor sizes (AE3).** 1920px CSS (the school monitor at 100%) is the reference.
+  - **Scaling:** on wider windows the whole app is scaled by `zoom` = clamp(window width ÷ 1920, 1, 1.5) (`theme.ZOOM`), so 1920 and 2560 show the same layout. Measured: the home stage is 65.2% of the width at both. 1920px and below are unchanged and keep the responsive rules.
+  - **Implementation (`components/browser.fit_zoom`, run first):** it sets `html` zoom and `--app-zoom`. It reports `devicePixelRatio` × zoom so every canvas (ECharts, Three.js, the 02 network) stays sharp. It divides chart mouse offsets inside `[_echarts_instance_]` by the zoom, computed from the real target so charts in shadow DOM work too. Without that, a click picked the row below.
+  - **Other coordinate fixes:** the panel's max-height divides `100dvh` by `--app-zoom`. The home drone's flight paths and bump offsets divide screen px by the zoom, and its full-screen flight canvas is sized at viewport ÷ zoom. The 02 network converts pointer coordinates by the canvas scale.
+
+### 12.12 AB-round (user requests 2026-10-04, all pages) — Proposed (not in source)
+
+- **Dividers and connector lines (AB9):** every divider and connector is a solid 1px `--outline` line, the same line as page 02 (dark #727272 / light #C0C0BE). This covers the top bar underline, the sidebar brand line and sub-menu connector, the tab underline, the chart card footer, dialog sections, the home guide connector, the home note, the home KPI separators and the roadmap line. Chart gridlines inside charts are not included. `--border` is no longer used for lines, except the table (AgGrid) grid colour.
+- **Overlaid bars (AB6):** in `overlay_hbar` (01·기업 탐색) and `thin_split_hbar` (채용 현황), the red "그중 방산" bar sits below the green total by `CHART.overlap_shift` (30%) of the bar width (`barGap` −70%), so it reads as layered rather than joined. Follow-up (2026-10-04): each bar is thinner, at width ÷ 1.3 (22 → 17px, thin 14 → 11px), so the two offset bars together are as tall as the old single bar and the chart keeps its earlier size.
+- **Search box toggle (AB1):** in a selectbox or multiselect, clicking the open chevron (▴) closes the list. Streamlit 1.64 reopened it at once. A capture listener in `components/browser.py` turns that press into Esc.
+- **Card lists (AB7·AB8):** the five card expanders (01 연구 과제, 02 직무 카드, 03 교육 과정, 04 공고 카드, 04 기업 카드) look and behave the same.
+  - **Label:** a fixed label and key, with no count in the label, so a keyword or chip click never re-creates or closes the expander. Counts and conditions move inside.
+  - **Top row (`filters.card_bar`):** card-only toggles and sorting on the left. On the right, a "N개씩 보기" dropdown with 5·10·20, width `--card-size-w`.
+  - **Defaults:** job cards (including the 02 keyword results) show 5; all other lists show 10. The pager reads "이전/다음 N개".
+  - **Toggle placement:** toggles that also change a chart stay above the chart (기업 탐색 '방산 강조', 채용 현황 '방산 관련 기업만 보기'). 기업 탐색 '목표 직무 관련 강조' moved into the card row.
+  - **Scroll fix:** the "보러가기" scroll helper stops re-snapping as soon as the user scrolls (wheel, touch, key or pointer), so the page no longer jumps back up.
+- **Page contents (AB5):** the intro card holds the intro text on the left and a contents row on the right, using its empty space. The row wraps below the text when there is no room.
+  - **AD2 (2026-10-04):** the eyebrow and title span the card. Below them, the description and the contents share one row, bottom-aligned, with the contents right-aligned. The description narrows from `--measure` down to `--measure` / 2 next to the contents. Below that, the contents move to the next line.
+  - **AD3:** a contents item that points at a collapsed expander (01 연구 과제, 02 직무 카드, 03 교육 과정, 채용 현황 경력·학력 and 공고 카드, 기업 탐색 기업 카드) also opens it while scrolling. This is flagged per item in `PAGE_TOC`. AD4: because a collapsed page is too short to bring the header to the top, the toc re-aligns the section a few times while the content renders (0.4–3s), so the opened section ends at the top of the screen with the `--space-md` gap. It stops if the user scrolls.
+- **Card order with highlights (AD1):** in every card list, turning on 목표 직무 관련 강조 or 방산 강조 moves the related cards to the front (`filters.highlight_first`). The order is goal-related (defense first inside), then defense-related, then the rest, and each group keeps its order. Counts stay the same. The status lines and toggle help say so.
+  - **Items:** each is a number in a `--toc-no` circle (`--primary` outline) plus a short name, with `--outline` separators. A click scrolls smoothly to the section, 16px below the top.
+  - **Sections:** 01 산업 규모 · 활용 분야 · 연구 기술 · 연구 과제. 02 직무 네트워크 · 직무 카드 · 키워드로 찾기. 03 지역별 교육 · 키워드로 찾기 · 교육 과정 (the conditional skill section is left out). 채용 현황: 직무·지역 · 경력·학력 · 공고 카드 · 직무와 공고 비교. 기업 탐색: 분야별 기업 · 공고 노출 · 기업 카드. Home has no contents row.
+- **Roadmap (AB2·AB3·AB4):**
+  - **Line:** the 01–04 numbers are joined by a vertical `--outline` line.
+  - **Progress:** on 02, 03, 채용 현황 and 기업 탐색 (steps 1–4), the numbers up to the current step turn `--primary`, and the line segments before it turn `--primary` at `--rm-path-w` (2px). The existing "-set" rule (a step holding items has a green number) is kept.
+  - **Drone:** a top-view quadcopter (`static/img/rm_drone.svg`, a mask filled `--primary`, `--rm-drone` 16px) lands left of the current step number: a 900ms descent with tilt, overshoot and settle. On 01 it sits right of the panel title. Home has no drone. Reduced motion shows no landing.
+  - **Items:** saved items are one line in caption × `--mycond-scale`, cut with an ellipsis. A click opens the detail popup (job, posting or company); a course opens its source page in a new tab (user decision). The release control is an × icon only.
+  - **Folding:** the scrap lists (02–04) have a fold button next to "n/3". They start collapsed and the button shows only when the list has items. The goal job is always shown.
+  - **Height:** the panel's height is capped at the viewport (`100dvh − 2 × --space-md`) and scrolls inside first.
+  - **AC-round (2026-10-04):**
+    - Drone image: the user's icon (`static/img/rm_drone.png`, 50×50, transparent), used as the same `--primary` mask.
+    - Highlight area: the hover surface and the "-set" highlight (`--accent-soft` with the 3px `--primary` inset bar) cover only the area right of the number column, starting at `--space-xs` + `--roadmap-no-w` + `--space-xxs`. They no longer overlap the number or the drone.
+    - Instant folding: the fold button is a `components.v2` button that toggles `html[data-rm-open]` (for example `|02|03|`) at once. Items are always rendered and hidden by CSS unless their step is listed. The value is then synced to Python, so the state survives page changes.
+
 ### 12.11 P-round (user requests 2026-10-02, home from teammate + sidebar icons) — Proposed (not in source)
 
 Source: the teammate's home-only build (`home-only.html`). Values are copied from it into `core/theme.py` as `--hm-*` tokens (BASE for sizes/fonts, MODE for stage and airspace colours). They replace the D9 home drone in §10 for the home page.
@@ -399,6 +542,12 @@ Source: the teammate's home-only build (`home-only.html`). Values are copied fro
       - Coming back to home, the drone returns from that panel's direction. Leaving through the sidebar means it returns from 2 o'clock.
     - The pause/play icon (32px, top right) is the existing 'motion' setting.
     - When motion is off or reduced motion is set, all flights are skipped.
+    - **Roadmap open/close reaction (user request AA8, 2026-10-03, Proposed).** The toggle sends a `dd-roadmap` window event.
+      - **Open** (the stage gets narrower): the drone acts as if it were hit by the panel coming in from the right. It gets a leftward kick of 900 px/s on an underdamped spring (ω 6.5, ζ 0.32), so it is pushed about 90px left, wobbles once or twice and settles at the centre.
+      - **Close** (the stage gets wider): for 450ms the drone holds its on-screen position while the centre moves away, and a following spring (ω 4.2, ζ 0.85) brings it to the new centre a little after the layout.
+      - Attitude: roll = −velocity × 0.018° (±18°), yaw = velocity × 0.012° (±12°).
+      - Skipped when motion is off, reduced motion is set, during entry/return or departure flights, or while the menu is changing.
+      - While the stage resizes, the background point-cloud canvas is redrawn inside the resize step, so it never shows blank.
 - **Roadmap guide:** 4 steps in one `--surface` panel.
   - Each step has a 32px numbered circle (1px `--primary` ring, `--primary` 700 14px figure), and 1px `--surface-3` connectors run on the circles' centre line.
   - Step titles are 700 16/24; bodies use `--font-body` in `--text-2`.
@@ -484,6 +633,30 @@ Source: the teammate's home-only build (`home-only.html`). Values are copied fro
     - The pager wraps around: 'previous' on the first page goes to the last page, and 'next' on the last page goes to the first.
     - It replaces the company-list '기업 더보기' popup.
 
+- **X-round (2026-10-02), card expanders behave the same on every page:**
+  - Closed by default.
+  - Picking something from a chart or its linked chips/search opens the filtered cards automatically. Clearing a selection does not close them (the 03 rule). Trigger controls per page:
+    - 01: tech and application bars
+    - 02: network major/middle, 하는 일 chips, search
+    - 03: map and keyword bars
+    - 04 postings: job bars, map, education/career chips, region
+    - 04 companies: field bars/chips, co-occurrence bars, keyword
+  - Opening does not scroll. Only the explicit '보러가기' buttons scroll.
+  - **04 company cards:** the defense-only toggle and the sort control share one row, and the 정렬 label is hidden.
+
+- **Y-round (2026-10-02):**
+  - **Home:** no top bar. The page starts with the title. The other pages keep the top bar, including its 탐색 경로 toggle. (Changed by AA4, 2026-10-03: home now shows the toggle alone at the top right; see §6.4 Top bar.)
+  - **Home spacing:** `--hm-guide-mt` and `--hm-faq-mt` go from 104/136px to 48px, and the gap under the FAQ title from 24px to 8px.
+  - **Thin horizontal bars** (`hbar(thin=True)`): 2/3 bar width (the same as the 03/04 thin bars) and a 30px row (`CHART.row_h_thin`).
+  - **04 채용 현황:** the 경력·학력 charts use thin bars and sit in a fixed-title expander, '경력·학력 조건 보기', closed by default.
+
+- **Z-round (2026-10-02, rendering fidelity for the v5 share):**
+  - **Narrow KPI tiles** (`.tiles` is an inline-size container): at ≤820px the icon circle and glyph shrink ×.75, padding becomes `--space-sm` / `--space-md`, the number `--type-kpi-size` ×.82 and the label `--type-card-title-size` ×.9. At ≤600px the icon moves above the text (column layout, `--space-sm` padding).
+  - **Home KPI strip** (container `hm`): at ≤760px the chevron is hidden and padding tightens; at ≤640px it becomes 2 columns.
+  - **Share only:** controls (buttons, pills, tabs, labels) never wrap; a chart-card body ≤360px shrinks segmented-button padding to `--space-sm`.
+  - **Fonts in the share:** all five Pretendard weights (400–800) are embedded with `font-display:block`, and the first render waits for them (2.5s cap).
+  - **Removed tokens:** `--hero-*`, TYPE `hero` and `nav-no` (the old SVG home).
+
 ### 12.10 O-round (user requests 2026-10-02, global + 02) — Proposed (not in source)
 
 - **Card base border:** every card has a `--card-border-w` border in `--control` (dark #535353, light #D1D1D1). Defense, drone, goal and picked styles override it as before.
@@ -509,6 +682,7 @@ Source: the teammate's home-only build (`home-only.html`). Values are copied fro
   - '비율': the former H07 diverging share chart; ignores the job filter
   The card meta, subtitle and table follow the active view.
 - **Roadmap '내 조건' block** (N14): at the bottom of '나의 탐색 경로', below a `--outline` divider. It holds education and career single-select pills and a regions multiselect, with widget labels in `--font-label`. It is input only (saved) and feeds the posting dialog comparison and the 03 course ordering; it does not filter.
+  - **AA5 (2026-10-03, Proposed):** the title '내 조건' stays at its size, and its description stays visible. The three inputs sit inside an expander '학력·경력·희망 지역' (fixed label and key `my_cond_open`, collapsed by default). The description, the expander label, the widget labels, the pills and the multiselect text are at `--mycond-scale` (0.85) of the caption size: 11.9px instead of 14px.
 - **Goal highlight toggle** (04 채용 현황): moved inside the posting card expander, at the top.
 - **Comparison empty state:** each missing item is a blue note box (`--note-bg`, text `--note-fg`; Streamlit info colors, Proposed) with an outlined blue button of fixed width `--note-btn-w` (200px): '직무 선택하러 가기' (to 02) or '공고 스크랩하러 가기' (opens the card expander and scrolls to it).
 
@@ -533,6 +707,7 @@ Source: the teammate's home-only build (`home-only.html`). Values are copied fro
     - Focused sway: amplitude and period 0.16 / 420 frames for a major, 0.08 / 600 for a middle.
     - Labels while focused or defense-highlighted: only the highlighted branch is labelled; others show a label on hover only.
     - Motion off or reduced motion: no auto-rotation.
+    - **Entry growth (user request AA1, 2026-10-03) — Proposed (not in source):** each time page 02 is entered, the graph grows out of the core over `MOTION.net_grow_ms` (3500ms; first 2000ms, lengthened by user request AA2). Stages on a 0–1 progress scale: core 0–0.15; majors start at 0.10, middles at 0.35, jobs at 0.62, each taking about 0.3, with up to 0.06 of stagger inside a level. Each link extends from its parent toward the child (cubic ease-out), and the child dot pops in over the last quarter of its link. Rings fade in over the first third; labels fade in over the last 15%. Rotation continues meanwhile. It does not replay for changes inside the page (selection, filters) or for the theme-switch reload. With motion off or reduced motion, the graph appears complete.
   - Labels: the core and front-facing majors are always labelled; middles when their major is focused; jobs when their middle is focused; otherwise on hover. The tooltip shows the name and count, or '누르면 상세'.
 
 ### 12.7 L-round (user requests 2026-10-01, cards) — Proposed (not in source)

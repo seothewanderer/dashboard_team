@@ -12,8 +12,9 @@ from analytics.common import paginate
 from components import charts
 from components.badges import badge, draft_badge
 from components.chart_card import chart_card
+from components.note import note
 from components.effects import stat_tiles
-from components.filters import pager
+from components.filters import card_bar, card_fold, pager
 from components.page_intro import page_intro
 from core import routing, theme
 from core.data_loader import load_table
@@ -49,7 +50,7 @@ with st.expander("연도별 추이와 제작·활용 구성 보기", key="i01_tr
                 opt, h = charts.sparkline(trend["reference_year"].tolist(), trend[field].round(2).tolist(), unit=unit,
                                           draw=True)
                 charts.render(opt, f"i01_trend_{field}", h)
-        st.caption("조사 표본이 해마다 달라 연도 차이를 성장률로 해석하지 않습니다.")
+        note("조사 표본이 해마다 달라 연도 차이를 성장률로 해석하지 않습니다.")
 
 # ---- I02 분야 (전체 폭, 요청 F1) — 방산 관련 기업 수 겹침(요청 H2) ----
 comp = company_frame()
@@ -108,7 +109,7 @@ if selected:
             st.html(f'<p class="detail__label">{escape(selected)}에서 하는 일 예시 {draft_badge(jobs_here.review_status.iloc[0])}</p>'
                     f'<ul class="detail__list">{items}</ul>')
         else:
-            st.caption(f"{selected}에 연결된 직무 후보가 아직 없습니다. 직무 전체에서 찾아보세요.")
+            note(f"{selected}에 연결된 직무 후보가 아직 없습니다. 직무 전체에서 찾아보세요.")
         if len(rel_row):
             r = rel_row.iloc[0]
             st.caption(f"국방 활용 관계({r.defense_use_case_relation}): {r.relation_rationale} · {r.usage_note}")
@@ -122,7 +123,7 @@ if selected:
         if b3.button("채용 현황에서 자세히", key="i_to_postings", icon=":material/arrow_forward:", width="stretch"):
             routing.go("recruit", sub="postings")
 else:
-    st.caption("분야를 고르면 대표 업무와 관련 직무·기업으로 이어집니다. 인기 분야를 미리 고르지 않습니다.")
+    note("분야를 고르면 대표 업무와 관련 직무·기업으로 이어집니다. 인기 분야를 미리 고르지 않습니다.")
 
 # ---- 드론 분야 연구 기술 (국가 R&D) — 그래프는 바로 보이게, 과제 목록은 '연구 과제 탐색' 펼치기 (요청 H1·H4·H6·H7) ----
 TECH, APP, EXPLORE, EX_PAGE = "i03_tech", "i03_app", "i03_explore", "i03_page"
@@ -148,7 +149,7 @@ def _pick_app(name: str) -> None:
     st.session_state.update({EX_PAGE: 0, EXPLORE: True})
 
 
-st.html('<h2 class="section-title">드론 분야에서 연구하는 기술 · 국가 R&D 과제</h2>')
+st.html('<h2 class="section-title" id="sec-rnd">드론 분야에서 연구하는 기술 · 국가 R&D 과제</h2>')
 wide = st.toggle("탐색 범위 과제까지 포함", key="i03_wide",
                  help="기본은 관련성이 높은 과제만. 켜면 탐색 범위 과제를 더합니다(관련성 낮은 과제는 항상 제외).")
 topics = I.ntis_scope(load_table("ntis_topics"), wide)
@@ -182,22 +183,23 @@ app = st.session_state.get(APP) if tech else None
 if tech:
     m = I.tech_application_matrix(topics)
     row = m.loc[[tech]]
-    st.caption(f"'{tech}' 과제의 활용 분야 · 셀 = 두 태그를 함께 가진 과제 수 · 칸을 누르면 아래 '연구 과제 탐색'에 그 과제가 나옵니다")
+    note(f"'{tech}' 과제의 활용 분야 · 셀 = 두 태그를 함께 가진 과제 수 · 칸을 누르면 아래 '연구 과제 탐색'에 그 과제가 나옵니다")
     opt, h = charts.heatmap(row.columns.tolist(), [tech], row.values.tolist(), unit="개 과제",
-                            selected_x=app, click_x=True, rotate_x=30)   # 활용 분야 이름 겹침 방지
-    charts.render(opt, "i03_heat", h + theme.CHART["heat_extra"], on_click=_pick_app)   # 기울인 이름 자리만큼 높게
+                            selected_x=app, click_x=True, x_font=theme.px("label"))   # 활용 분야 이름은 가로 한 줄, 글자 한 단계 작게(요청 AL)
+    charts.render(opt, "i03_heat", h, on_click=_pick_app)
 
 # 연구 과제 탐색: 펼치면 전체 과제, 기술·활용 분야를 고르면 자동으로 펼쳐지고 조건이 걸림. 10개씩
 found = I.projects_for(projects, topics, tech, app)
 scope = f"{tech} × {app}" if app else (tech or "전체 과제")
-with st.expander(f"연구 과제 탐색 · {scope} {len(found):,}개", key=EXPLORE, on_change="rerun"):
-    with st.container(horizontal=True, vertical_alignment="center", key="i03-explore-bar"):
+# 제목·키를 고정해 다시 만들어지지 않게(요청 AB8: 기술·활용 분야를 누를 때 닫히거나 화면이 튀지 않게, 02와 같은 방식). 조건·건수는 안쪽에
+with card_fold("연구 과제 탐색", EXPLORE):
+    with card_bar("i03_page_size", 10, EX_PAGE) as size:
         st.html(f'<p class="context-line">조건 · <b>{escape(scope)}</b> · 최근 기준연도 → 정부 투자액 순</p>', width="stretch")
         if tech:
             st.button("조건 해제(전체 과제)", key="i03_clear", type="tertiary", icon=":material/close:",
                       on_click=lambda: st.session_state.update({TECH: None, APP: None, EX_PAGE: 0}))
-    no = pager(EX_PAGE, len(found), label="개 과제")
-    rows, _ = paginate(found, no)
+    no = pager(EX_PAGE, len(found), size, label="개 과제")
+    rows, _ = paginate(found, no, size)
     for r in rows.itertuples():
         mark = badge("방산 태그", "defense") if r.defense_flag == 1 else ""
         st.html(f'<div class="evidence-row"><p class="evidence-row__title">{escape(r.project_title)} {mark}</p>'

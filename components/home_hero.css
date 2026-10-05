@@ -1,6 +1,6 @@
 /* 홈 3D 드론 Hero (요청 P1·P2, 2026-10-02). 원본: 팀원 home-only.html 의 Home 전용 스타일(.hm-*).
    값은 core/theme.py 토큰(--hm-*·공통 토큰)만 쓴다. 라이트/다크 차이는 토큰 값이 모드별로 바뀌어 처리된다. */
-.hm-root{--hm-line:color-mix(in srgb,var(--text) 7%,transparent);font-family:var(--font-sans);color:var(--text)}
+.hm-root{--hm-line:color-mix(in srgb,var(--text) 7%,transparent);font-family:var(--font-sans);color:var(--text);container:hm / inline-size}
 
 /* ================= 요약 카드 4개: 하나의 surface + 가는 구분선 (요청 R: C안 — 왼쪽 아이콘 · 오른쪽 화살표, 누르면 그 페이지) ================= */
 .hm-kpi{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));background:var(--surface);border-radius:var(--radius-lg);overflow:hidden;
@@ -8,7 +8,7 @@
 .hm-kpi__item{display:flex;align-items:center;gap:var(--space-sm);padding:var(--hm-kpi-pad-y) var(--hm-kpi-pad-x);min-width:0;border:0;background:transparent;
   font:inherit;color:inherit;text-align:left;cursor:pointer;opacity:0;transform:translateY(var(--space-xs));
   animation:hm-rise 400ms var(--ease-standard) forwards;transition:background var(--duration-fast) var(--ease-standard),box-shadow var(--duration-fast) var(--ease-standard)}
-.hm-kpi__item + .hm-kpi__item{border-left:var(--border-w) solid var(--surface-3)}
+.hm-kpi__item + .hm-kpi__item{border-left:var(--border-w) solid var(--outline)}
 .hm-kpi__item:nth-child(2){animation-delay:60ms}.hm-kpi__item:nth-child(3){animation-delay:120ms}.hm-kpi__item:nth-child(4){animation-delay:180ms}
 .hm-kpi__item:hover{background:var(--accent-soft);box-shadow:inset var(--indicator-w) 0 0 var(--primary)}   /* 드론 메뉴 패널과 같은 hover */
 .hm-kpi__item:focus-visible{outline:var(--focus-w) solid var(--text);outline-offset:calc(-1 * var(--space-xxs))}
@@ -28,6 +28,11 @@
 .hm-kpi__item:hover .hm-kpi__go{border-color:var(--primary);transform:translateX(0) rotate(45deg)}
 @keyframes hm-rise{to{opacity:1;transform:none}}
 .hm-still .hm-kpi__item{animation:none;opacity:1;transform:none}
+/* 요약 카드 영역이 좁을 때(창이 좁거나 탐색 경로가 열려 있을 때): 숫자+단위가 화살표와 겹치지 않게 여백을 줄이고 화살표를 숨긴다(v5 렌더링 맞춤) */
+@container (max-width:760px){.hm-kpi__item{padding:var(--hm-kpi-pad-y) var(--space-sm);gap:var(--space-xs)}.hm-kpi__go{display:none}}
+/* 더 좁으면 2칸 2줄 */
+@container hm (max-width:640px){.hm-kpi{grid-template-columns:repeat(2,minmax(0,1fr))}.hm-kpi__item:nth-child(3){border-left:0}
+  .hm-kpi__item:nth-child(n+3){border-top:var(--border-w) solid var(--outline)}}
 
 /* ================= Drone Hero stage ================= */
 .hm-stage{position:relative;height:var(--hm-h);background:var(--hm-stage-bg);border-radius:var(--radius-lg);overflow:hidden;color:var(--text);
@@ -142,7 +147,7 @@
 
 /* ================= 반응형 ================= */
 @media (max-width:1024px){.hm-kpi{grid-template-columns:repeat(2,minmax(0,1fr))}.hm-kpi__item:nth-child(3){border-left:0}
-  .hm-kpi__item:nth-child(n+3){border-top:var(--border-w) solid var(--surface-3)}}
+  .hm-kpi__item:nth-child(n+3){border-top:var(--border-w) solid var(--outline)}}
 @media (max-width:767px){
   .hm-stage{height:auto;padding-bottom:var(--space-md)}
   .hm-core{position:relative;left:auto;top:auto;transform:none;margin:var(--space-lg) auto 0;display:block;width:240px}
@@ -152,7 +157,7 @@
   .hm-stage:not(.is-open) .hm-menu{display:none}
   .hm-guides{display:none}}
 @media (max-width:560px){.hm-kpi{grid-template-columns:1fr}
-  .hm-kpi__item{padding:var(--space-md) var(--space-lg)}.hm-kpi__item + .hm-kpi__item{border-left:0;border-top:var(--border-w) solid var(--surface-3)}}
+  .hm-kpi__item{padding:var(--space-md) var(--space-lg)}.hm-kpi__item + .hm-kpi__item{border-left:0;border-top:var(--border-w) solid var(--outline)}}
 @media (prefers-reduced-motion:reduce){
   .hm-kpi__item{animation:none;opacity:1;transform:none}
   .hm-go{--s0:1}

@@ -159,6 +159,25 @@ def resources_for(resources: pd.DataFrame, job_id: str, skill: str) -> pd.DataFr
     return rows.sort_values(by="relevance_type", key=lambda s: s.map(order), ignore_index=True)
 
 
+# 내 직무 준비(요청 AG2): 연결 자료를 세 묶음으로 — 직접·포함 / 기초 참고 / 공식 문서
+RES_GROUPS = {"직접·포함": ("DIRECT", "INCLUDED"), "기초 참고": ("PREREQUISITE",), "공식 문서": ("OFFICIAL_RESOURCE",)}
+_KO_PLACEHOLDER = " 관련 기술"   # 연결표에 한글 이름이 없으면 'X 관련 기술'로 적혀 있음 → 한글 이름 없음으로 본다
+
+
+def skill_names(resources: pd.DataFrame) -> dict[str, str]:
+    """기술 키(selected_skill) → 한글 이름. 한글 이름이 없거나 키와 같으면 넣지 않는다."""
+    d = resources.drop_duplicates("selected_skill").set_index("selected_skill")["skill_name_ko"].dropna()
+    return {k: v for k, v in d.items() if v != k and not v.endswith(_KO_PLACEHOLDER)}
+
+
+def skill_label(skill: str, names: dict[str, str], md: bool = True) -> str:
+    """한글 이름(원래 이름). md = Streamlit 마크다운(원래 이름을 작게·흐리게)."""
+    ko = names.get(skill)
+    if not ko:
+        return skill
+    return f"{ko} :small[:gray[{skill}]]" if md else f"{ko}({skill})"
+
+
 def goal_reasons(courses: pd.DataFrame, job: pd.Series, resources: pd.DataFrame, synonyms: dict[str, str]) -> pd.Series:
     """목표 직무 관련 이유(요청 F5, 점수 없음): 연결표에서 목표 직무와 연결된 과정, 과정명·수집 검색어에 직무 기술."""
     linked = set(resources.loc[resources["is_work24"] & resources["job_id"].eq(job["job_id"]), "course_id"])

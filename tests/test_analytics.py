@@ -59,9 +59,12 @@ def test_filter_sort_paginate_order(comp):
     assert set(first.company_id).isdisjoint(second.company_id)
 
 
-def test_no_selection_is_name_order(comp):
+def test_no_selection_still_defense_first(comp):
+    # 요청 X2: 분야·키워드를 고르지 않아도 자동 정렬은 방산 관련 우선, '이름순'을 고르면 이름순
     out = C.sort_companies(comp, C.CompanyFilters())
-    assert out["company_name_normalized"].is_monotonic_increasing
+    rank = out["defense_group"].map({g: i for i, g in enumerate(D.GROUP_ORDER)})
+    assert rank.is_monotonic_increasing
+    assert C.sort_companies(comp, C.CompanyFilters(), "name")["company_name_normalized"].is_monotonic_increasing
 
 
 def test_keyword_does_not_pull_unrelated_defense_companies(comp):
@@ -247,3 +250,21 @@ def test_area_cooccurrence(comp):
     picked = len(C.filter_companies(comp, f))
     assert "방역/방제/살포" not in set(co.business_category) and C.NO_AREA not in set(co.business_category)
     assert co["n"].max() <= picked and (co["defense"] <= co["n"]).all()
+
+
+def test_skill_names_skip_placeholder():
+    # 요청 AG2: 연결표의 'X 관련 기술'은 한글 이름이 아니므로 키 그대로 보인다
+    names = L.skill_names(read_table("skill_resources"))
+    assert names["CAD"] == "컴퓨터 지원 설계"
+    assert "Regulation" not in names
+    assert L.skill_label("CAD", names, md=False) == "컴퓨터 지원 설계(CAD)"
+    assert L.skill_label("Regulation", names) == "Regulation"
+
+
+def test_table_height_estimate_grows_with_long_text():
+    # 요청 AP·AQ: 표 높이는 줄바꿈될 긴 글까지 어림(자동 높이는 팝업에서 0으로 남아 쓰지 않음)
+    from components.tables import HEADER_H, ROW_H, _est_height
+    short = pd.DataFrame({"a": ["x"], "b": ["y"]})
+    long = pd.DataFrame({"a": ["x"], "b": ["보고서 수록 내용 기준이며 계약·납품 여부는 별도 확인 필요 " * 4]})
+    assert _est_height(short, 10, 90) >= HEADER_H + ROW_H
+    assert _est_height(long, 10, 90) > _est_height(short, 10, 90) + ROW_H

@@ -11,10 +11,11 @@ from analytics.common import paginate
 from analytics.defense import TIER
 from components import cards, charts, tables
 from components.chart_card import chart_card
+from components.note import note
 from components.effects import stat_tiles
 from components.linked_chart_map import linked_chart_map
 from components.scroll import scroll_to
-from components.filters import (as_list, goal_status_line, goal_toggle,
+from components.filters import (as_list, card_bar, card_fold, goal_status_line, goal_toggle, highlight_first,
                                 handoff_banner, only_toggle, pager,
                                 toggle_value)
 from core import routing, state
@@ -28,7 +29,14 @@ KEYS = {"job_major_category": "post_job", "province_name": "post_region", "caree
 COLLECTED = POSTINGS_AS_OF                                 # 공고 기준일(원본에 날짜 열 없음, 사용자 확인 2026-10-02, 홈·FAQ와 같은 값)
 RATIO = "post_ratio"                                       # 직무 막대 '비율(%)로 보기'(요청 N6)
 DEF_ONLY_ALL = "post_only_defense_all"                     # 방산 관련 기업만 보기(아래 전체, 요청 N7)
+DEF_ONLY_CARDS = "post_only_defense_cards"                 # 공고 카드 줄의 같은 토글(요청 AI2): 위 토글과 켜짐·꺼짐 공유
 CARDS_OPEN, CARDS_GO = "post_cards_open", "post_cards_go"  # 공고 카드 펼치기 열림 · '스크랩하러 가기' 누른 시각
+
+
+def _open_cards() -> None:
+    """그래프·지도·조건 칩으로 무언가를 고르면 공고 카드를 펼친다(요청 X3, 03과 같은 규칙: 해제해도 닫지 않음)."""
+    if any(as_list(st.session_state.get(k)) for k in KEYS.values()):
+        st.session_state[CARDS_OPEN] = True
 
 
 def _goal_job():
@@ -49,6 +57,9 @@ def render() -> None:
         handoff_banner(f"기업 탐색에서 온 '{escape(name)}'의 연결 공고만 보는 중", "post_clear_company",
                        lambda: st.session_state.update({"post_company": None, PAGE: 0}))
 
+    # 같은 설정을 두 곳(공고 조건 줄·공고 카드 줄)에 둔다(요청 AI2). 위젯 키는 하나에 하나라, 카드 줄 토글은 그리기 전에
+    # 위 토글 값으로 맞추고 바뀌면 위 토글 값에 써 넣는다
+    st.session_state[DEF_ONLY_CARDS] = bool(st.session_state.get(DEF_ONLY_ALL))
     sample = P.filter_postings(pf, {}, [company] if company else None)   # 수집 표본 전체(내 조건·필터 전)
     k = P.kpis(sample)
     dfn = sample[sample.defense_group.map(lambda g: bool(TIER.get(g)))]
@@ -74,18 +85,18 @@ def render() -> None:
             st.html('<p class="mc-label">학력</p>', width="content")
             st.pills("학력", [v for v in P.EDUCATION_ORDER if v in set(pf.education_normalized)], selection_mode="multi",
                      key=KEYS["education_normalized"], label_visibility="collapsed",
-                     on_change=lambda: st.session_state.update({PAGE: 0}))
+                     on_change=lambda: (st.session_state.update({PAGE: 0}), _open_cards()))
         with c2, st.container(horizontal=True, vertical_alignment="center", key="mc-career"):
             st.html('<p class="mc-label">경력</p>', width="content")
             st.pills("경력", [v for v in P.CAREER_ORDER if v in set(pf.career_type)], selection_mode="multi",
                      key=KEYS["career_type"], label_visibility="collapsed",
-                     on_change=lambda: st.session_state.update({PAGE: 0}))
+                     on_change=lambda: (st.session_state.update({PAGE: 0}), _open_cards()))
         with c3, st.container(horizontal=True, vertical_alignment="center", key="mc-region"):
             st.html('<p class="mc-label">지역</p>', width="content")
             # 드롭다운(요청 N11) = 지도와 같은 지역 필터(지도를 누르거나 끄면 여기도 바뀜)
             st.multiselect("지역", sorted(pf.province_name.unique()), key=KEYS["province_name"],
                            label_visibility="collapsed", placeholder="전체 지역 · 눌러서 선택",
-                           on_change=lambda: st.session_state.update({PAGE: 0}))
+                           on_change=lambda: (st.session_state.update({PAGE: 0}), _open_cards()))
         with c4, st.container(horizontal_alignment="right"):   # 거르기 영역 안 오른쪽(요청 N2)
             # 방산 관련 기업만 보기(요청 N7): 아래 그래프·카드 전체를 방산 관련 기업 공고로만. 이 화면 전용 상태
             # (02·기업 탐색의 '방산 강조'(흐리게만)와는 별개)
@@ -107,13 +118,13 @@ def render() -> None:
                       on_click=lambda: [st.session_state.update({v: [] for v in KEYS.values()}),
                                         st.session_state.update({PAGE: 0})])
 
-    def bar(dim: str, meta: str, title: str, order=None, key_suffix=""):
+    def bar(dim: str, meta: str, title: str, order=None, key_suffix="", thin=False):
         c = P.dim_counts(scoped, dim, filters, order)
         with chart_card(meta, key=f"h-{dim}", title=title, n=len(scoped),
                         table=c.rename(columns={dim: "구분", "n": "공고 수"})):
-            opt, h = charts.hbar(c[dim].tolist(), c.n.tolist(), selected=filters[dim], unit="건")
+            opt, h = charts.hbar(c[dim].tolist(), c.n.tolist(), selected=filters[dim], unit="건", thin=thin)
             charts.render(opt, f"h_{dim}{key_suffix}", h,   # 막대 클릭 = 위 '공고 조건으로 거르기' 단추와 같은 키(켜기·끄기 공유)
-                          on_click=lambda name: toggle_value(KEYS[dim], name, multi=True, reset=PAGE))
+                          on_click=lambda name: (toggle_value(KEYS[dim], name, multi=True, reset=PAGE), _open_cards()))
 
     # ---- 직무 막대(왼쪽) + 지역 지도(오른쪽) 연동 (요청 N5: 03 '지도 + 키워드 막대'와 같은 형태, 좌우 반대) ----
     # 지도에 마우스 = 그 지역의 직무별 공고로 막대가 바로 바뀜, 지도 클릭 = 지역 필터, 막대 클릭 = 직무 필터.
@@ -157,17 +168,19 @@ def render() -> None:
                       if not def_only else "방산 관련 기업만 보는 중에는 비교할 '그 외' 공고가 없습니다.")
         linked_chart_map(dict(zip(rc.province_name, rc.n)), views, home, selected_regions=reg_f, unit="건",
                          key="h_job_region",
-                         on_region=lambda name: toggle_value(KEYS["province_name"], name, multi=True, reset=PAGE),
-                         on_bar=lambda name: toggle_value(KEYS["job_major_category"], name, multi=True, reset=PAGE))
+                         on_region=lambda name: (toggle_value(KEYS["province_name"], name, multi=True, reset=PAGE), _open_cards()),
+                         on_bar=lambda name: (toggle_value(KEYS["job_major_category"], name, multi=True, reset=PAGE), _open_cards()))
         # 03과 같게 칩 대신 안내 한 줄(고른 조건은 위 '필터 모두 해제'로 지움)
-        st.caption("지도에 마우스를 올리면 왼쪽 막대가 그 지역 값으로 바뀌고, 누르면 그 지역 공고만 봅니다. "
+        note("지도에 마우스를 올리면 왼쪽 막대가 그 지역 값으로 바뀌고, 누르면 그 지역 공고만 봅니다. "
                    "막대를 누르면 그 직무로 거릅니다(다시 누르면 해제).")
 
-    a, b = st.columns(2, gap="medium")
-    with a:
-        bar("career_type", "H02", "경력 조건", P.CAREER_ORDER)
-    with b:
-        bar("education_normalized", "H02", "학력 조건", P.EDUCATION_ORDER)
+    # 경력·학력 조건 = 펼치기(요청 Y3, 기본 닫힘·제목 고정). 막대는 얇게·촘촘하게
+    with st.expander("경력·학력 조건 보기", key="post_cond_open", on_change="rerun"):
+        a, b = st.columns(2, gap="medium")
+        with a:
+            bar("career_type", "H02", "경력 조건", P.CAREER_ORDER, thin=True)
+        with b:
+            bar("education_normalized", "H02", "학력 조건", P.EDUCATION_ORDER, thin=True)
 
     # (H07 비율 그래프는 위 '어느 직무의 공고인가'의 '비율' 보기로 합침, 요청 N3)
 
@@ -177,9 +190,9 @@ def render() -> None:
             opt, h = charts.heatmap(m.columns.tolist(), m.index.tolist(), m.values.tolist(), unit="건")
             charts.render(opt, "h02_heat", h)
         et = P.employment_tag_counts(result)
-        opt, h = charts.hbar(et.employment_types.tolist(), et.n.tolist(), unit="건",
+        opt, h = charts.hbar(et.employment_types.tolist(), et.n.tolist(), unit="건", thin=True,   # 얇은 막대로 세로 길이 줄임(요청 AI1)
                              tooltip_note="한 공고가 여러 형태에 중복 집계")
-        st.caption("고용형태 · 한 공고가 여러 형태에 중복 집계됩니다")
+        note("고용형태 · 한 공고가 여러 형태에 중복 집계됩니다")
         charts.render(opt, "h02_emp", h)
 
     # ---- H04 공고 카드 ----
@@ -187,22 +200,26 @@ def render() -> None:
     ordered = result.sort_values(["job_major_category", "title"])
     # 제목·키를 고정해 다시 만들어지지 않게(화면 튐 방지, 02와 같은 방식). 건수는 안쪽 쪽 표시에
     scroll_to(".st-key-post-cards", st.session_state.get(CARDS_GO), key="post_cards_scroll")
-    with st.container(key="post-cards"), st.expander("공고 카드 보기 · 원문에서 조건을 확인하세요", key=CARDS_OPEN,
-                                                     on_change="rerun"):
-        goal_on = goal_toggle()                       # 카드 강조 기능이라 카드 펼치기 안으로 옮김(요청 N15)
+    with st.container(key="post-cards"), card_fold("공고 카드 보기 · 원문에서 조건을 확인하세요", CARDS_OPEN):
+        with card_bar("post_page_size", 10, PAGE) as size:   # 다섯 곳 같은 맨 위 줄(요청 AB8)
+            only_toggle(DEF_ONLY_CARDS, "방산 관련 기업만 보기", "defense",
+                        "위 공고 조건 줄의 '방산 관련 기업만 보기'와 같은 설정입니다. 켜면 그래프와 공고 카드가 모두 방산 관련 기업의 공고만 보여 줍니다.",
+                        on_change=lambda: st.session_state.update({DEF_ONLY_ALL: st.session_state[DEF_ONLY_CARDS], PAGE: 0}))
+            goal_on = goal_toggle("postings")         # 카드 강조 기능이라 카드 펼치기 안으로 옮김(요청 N15)
         if goal_on:                                   # 목표 직무 관련 강조(요청 F5): 전체 결과에서 이유 계산
             ordered = ordered.assign(goal_reason=P.goal_reasons(
                 ordered, _goal_job(), load_table("bridge_job_posting_category_bridge"),
                 J.synonym_groups(load_table("bridge_skill_dictionary"))))
             goal_status_line(int(ordered.goal_reason.notna().sum()), len(ordered))
-        no = pager(PAGE, len(ordered), label="건")
-        rows, _ = paginate(ordered, no)
+        ordered = highlight_first(ordered, ordered.defense_group.map(lambda g: bool(TIER.get(g))))   # 요청 AD1
+        no = pager(PAGE, len(ordered), size, label="건")
+        rows, _ = paginate(ordered, no, size)
         cards.grid(rows, cards.posting_card)
         if not len(ordered):
-            st.info("선택한 자료·조건에서 관측 0건입니다. 시장에 채용이 없다는 뜻은 아닙니다.")
+            note("선택한 자료·조건에서 관측 0건입니다. 시장에 채용이 없다는 뜻은 아닙니다.", box=True)
 
     # ---- H06 나의 탐색 경로 01 직무와 스크랩한 공고 비교 (요청 E 충돌 3) ----
-    st.html('<h2 class="section-title">선택한 직무와 스크랩한 공고 비교</h2>')
+    st.html('<h2 class="section-title" id="sec-h06">선택한 직무와 스크랩한 공고 비교</h2>')
     goal = st.session_state["plan"]["goal_job_id"]
     ids = [v["entity_id"] for v in state.scrapped("posting") if v["entity_id"] in set(pf.posting_id)]
     if not goal or not ids:   # 아직 없으면 무엇이 없는지 알리고 바로 고르러 가기(요청 N4)
@@ -229,6 +246,7 @@ def render() -> None:
                                  load_table("bridge_job_posting_category_bridge"),
                                  J.synonym_groups(load_table("bridge_skill_dictionary")),
                                  load_table("posting_kw_freq")["keyword_normalized"].tolist())
-        tables.table(table, key=f"h06-{goal}-{'-'.join(ids)}")
-        st.caption("점수·적합도가 아닙니다. 공고별 요구 기술 자료가 없어 공고 제목·담당 업무 원문에 나온 용어만 확인합니다"
+        # 열(항목 + 공고 최대 3개)이 화면보다 넓으면 표 아래 가로 스크롤바로 오른쪽을 본다(요청 AO)
+        tables.table(table, key=f"h06-{goal}-{'-'.join(ids)}", min_col_w=300)
+        note("점수·적합도가 아닙니다. 공고별 요구 기술 자료가 없어 공고 제목·담당 업무 원문에 나온 용어만 확인합니다"
                    "(정확 표기 → 검토된 동의어). 분류 관계는 검토 전 관계표 초안입니다.")

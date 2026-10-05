@@ -52,7 +52,7 @@ $env:PYTHONPATH="."; .venv\Scripts\python.exe scripts\make_home_icon.py   # 홈 
 |---|---|
 | `.streamlit/config.toml` | DESIGN.md §9.2~9.3 테마·폰트 값. streamlit 1.64 `config show`로 키 인식 확인 |
 | `pytest.ini` | 테스트 경로(`tests`)와 import 기준(`pythonpath = .`). 실행: `.venv\Scripts\python.exe -m pytest -q` |
-| `..\.claude\launch.json` | Claude 미리보기용 실행 설정(`run.ps1 --server.headless true --server.port 8501`). 앱 동작과 무관 |
+| `.claude\launch.json` | Claude 미리보기용 실행 설정(`run.ps1 --server.headless true --server.port 8501`/8502, html 8777). 앱 동작과 무관. 2026-10-03 Claude 루트를 main으로 바꾸며 상위 폴더에서 이리로 옮김 |
 | 참고 | 실행 중 파이썬 모듈(core/components/views)을 고치면 서버를 재시작해야 반영된다. CSS(`static/css/base.css`)는 새로고침만으로 반영 |
 | 테마 | 첫 방문은 다크. 사이드바 하단 ☀/☾ 토글이 Streamlit 테마 저장값(localStorage)을 바꾸고 새로고침한다. 선택 상태는 localStorage `drone-career-v1`에 저장·복원 |
 | `static/fonts/` | Pretendard 400/500/600/700/800 OTF(300은 미등록, 파일만 남음) (`design/`에서 복사, 원본은 `design/`에 보존) |

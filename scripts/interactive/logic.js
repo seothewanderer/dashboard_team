@@ -63,7 +63,6 @@ L.keywordTier = (c, keyword) => {
 L.filterCompanies = (companies, f, exclude) => {
   let out = companies.filter((c) => {
     if (f.area.length && exclude !== "area" && !(c.areas.length ? c.areas : [L.NO_AREA]).some((a) => f.area.includes(a))) return false;
-    if (f.defense_group.length && exclude !== "defense_group" && !f.defense_group.includes(c.defense_group)) return false;
     if (f.has_posting && exclude !== "has_posting" && !c.has_posting) return false;
     return true;
   });
@@ -76,17 +75,30 @@ L.areaCounts = (companies, f) => {
   const base = new Set(L.filterCompanies(companies, f, "area").map((c) => c.company_id));
   return L.counts(L.areaLong(companies).filter((r) => base.has(r.id)), "area", "id");
 };
-L.groupCounts = (companies, f) => {
-  const base = L.filterCompanies(companies, f, "defense_group");
-  return L.GROUP_ORDER.map((g) => ({ key: g, n: base.filter((c) => c.defense_group === g).length }));
+// C01 기준(요청 U1·V3): 전체 기업 수 / 채용 기업 수(공고 연결) / 채용 공고 수(분야 간 중복) — 값과 그중 방산 관련
+L.BASES = { companies: "전체 기업 수", posted: "채용 기업 수", postings: "채용 공고 수" };
+L.areaBasisCounts = (companies, f, basis) => {
+  const base = L.filterCompanies(companies, f, "area"), byId = Object.fromEntries(base.map((c) => [c.company_id, c])), m = {};
+  L.areaLong(companies).forEach(({ id, area }) => { const c = byId[id]; if (!c || (basis === "posted" && !c.has_posting)) return;
+    const w = basis === "postings" ? c.posting_count : 1, r = m[area] || (m[area] = { key: area, n: 0, defense: 0 });
+    r.n += w; if (L.isDefense(c.defense_group)) r.defense += w; });
+  return Object.values(m).filter((r) => r.n > 0).sort((a, b) => b.n - a.n || cmp(a.key, b.key));
 };
+// 함께 하는 분야(요청 U2): 고른 분야 기업들이 함께 하는 다른 분야(고유 기업 수, 그중 방산 관련)
+L.areaCooccurrence = (companies, f, areas) => {
+  const base = L.filterCompanies(companies, { ...f, area: areas }), m = {};
+  base.forEach((c) => c.areas.forEach((a) => { if (areas.includes(a)) return;
+    const r = m[a] || (m[a] = { key: a, n: 0, defense: 0 }); r.n += 1; if (L.isDefense(c.defense_group)) r.defense += 1; }));
+  return Object.values(m).sort((a, b) => b.n - a.n || cmp(a.key, b.key));
+};
+// 자동 = 늘 방산 관련 우선(요청 X2), 이름순 = 이름
 L.sortCompanies = (rows, f, mode) => {
-  if (mode === "name" || !(f.area.length || f.keyword.trim())) return [...rows].sort(by("company_name_normalized"));
+  if (mode === "name") return [...rows].sort(by("company_name_normalized"));
   const rank = Object.fromEntries(L.GROUP_ORDER.map((g, i) => [g, i]));
   return [...rows].sort((a, b) => rank[a.defense_group] - rank[b.defense_group] || (a.match_tier || 0) - (b.match_tier || 0)
     || cmp(a.company_name_normalized, b.company_name_normalized));
 };
-L.isSortedByDefense = (f, mode) => mode !== "name" && !!(f.area.length || f.keyword.trim());
+L.isSortedByDefense = (f, mode) => mode !== "name";
 L.companyGoalReason = (c, jobId) => {
   const areas = new Set(D.applicationBridge.filter((r) => r.job_id === jobId && r.review_status !== "rejected").map((r) => r.application_id));
   const hit = c.areas.filter((a) => areas.has(a)).sort();
@@ -285,6 +297,11 @@ L.resourcesFor = (jobId, skill) => {
     .map((r) => ({ ...r, relevance: L.RELEVANCE_LABEL[r.relevance_type] }))
     .sort((a, b) => order.indexOf(a.relevance_type) - order.indexOf(b.relevance_type));
 };
+/* 내 직무 준비(analytics/learning.py, 요청 AG2): 연결 자료 세 묶음 · 기술 한글 이름(없으면 키 그대로) */
+L.RES_GROUPS = { "직접·포함": ["DIRECT", "INCLUDED"], "기초 참고": ["PREREQUISITE"], "공식 문서": ["OFFICIAL_RESOURCE"] };
+L.skillNames = RAW.skill_names || {};
+L.skillLabel = (s) => (L.skillNames[s] ? `${L.skillNames[s]}(${s})` : s);
+L.skillTerms = (s) => [s, ...(L.skillNames[s] ? [L.skillNames[s]] : [])];   // 교육 찾기에 쓰는 말: 기술 키 + 한글 이름
 L.courseGoalReason = (c, job) => {
   const linked = new Set(D.resources.filter((r) => r.is_work24 && r.job_id === job.job_id).map((r) => r.course_id));
   const why = linked.has(c.course_id) ? ["연결표 과정"] : [];

@@ -55,6 +55,18 @@ export default function(component) {
     if (k) target = { yaw: Math.PI - Math.atan2(x, z), pitch: -Math.atan2(y, Math.hypot(x, z)) * 0.8 };
   }
   S.target = target; S.zoomTarget = hasFocus ? data.focus_zoom : 1;
+  // 첫 등장: 가운데 핵에서 대분류 → 중분류 → 직무 순으로 가지가 자라남. 페이지에 들어올 때마다 한 번.
+  // 시작 시각을 window에 두어 다시 붙어도 처음부터 다시 하지 않고 이어 감. 테마 전환(새로고침)으로 다시 열린 경우는 생략
+  const G0 = window.__g3Grow;
+  if (!G0 || G0.id !== data.grow_id) {
+    let themeReload = false;
+    if (!G0) { try { themeReload = sessionStorage.getItem('drone-theme-reload') === window.location.pathname;
+      sessionStorage.removeItem('drone-theme-reload'); } catch (e) {} }
+    window.__g3Grow = { id: data.grow_id, t0: themeReload ? -Infinity : performance.now() };
+  }
+  S.grow0 = reduce ? null : window.__g3Grow.t0;
+  const LV = [[0, 0.15], [0.1, 0.32], [0.35, 0.32], [0.62, 0.3]];   // 층별 [시작, 길이](전체 진행 0~1 기준)
+  N.forEach((n, i) => { n._g0 = LV[n.level][0] + (n.level ? 0.06 * ((i * 0.618) % 1) : 0); });   // 같은 층도 조금씩 엇갈리게
 
   function size() {
     const w = root.clientWidth || 600, d = window.devicePixelRatio || 1;
@@ -106,11 +118,18 @@ export default function(component) {
   }
   function draw(w, h) {
     ctx.clearRect(0, 0, w, h);
-    data.rings.forEach((r, i) => ring(r, w, h, 0.18 - i * 0.04));
+    const g = S.grow0 === null ? 1 : Math.min(1, (performance.now() - S.grow0) / data.grow_ms);
+    const ge = (n) => {   // 이 점까지 자란 정도(0~1, 끝으로 갈수록 느려짐)
+      if (g >= 1) return 1;
+      const t = Math.max(0, Math.min(1, (g - n._g0) / LV[n.level][1])); return 1 - Math.pow(1 - t, 3);
+    };
+    data.rings.forEach((r, i) => ring(r, w, h, (0.18 - i * 0.04) * Math.min(1, g * 3)));
     const P = {}; N.forEach((n) => { P[n.id] = project(n, w, h); });
-    // 선: 깊이에 따라 흐리게, 강조 가지는 초록
+    // 선: 깊이에 따라 흐리게, 강조 가지는 초록. 자라는 중에는 부모 점에서 자식 쪽으로 뻗음
     data.links.forEach(([a, b]) => {
-      const pa = P[a], pb = P[b]; if (!pa || !pb) return;
+      const pa = P[a], pb0 = P[b]; if (!pa || !pb0) return;
+      const e = ge(byId[b]); if (e <= 0) return;
+      const pb = e >= 1 ? pb0 : { x: pa.x + (pb0.x - pa.x) * e, y: pa.y + (pb0.y - pa.y) * e, p: pb0.p };
       const on = !hasFocus || (focus.has(a) && focus.has(b));
       const depth = Math.max(0.15, Math.min(1, (pa.p + pb.p) / 2 - 0.45));
       const lit = !data.highlight || (byId[a].def && byId[b].def);   // 방산 강조: 방산 가지 밖은 불이 꺼진 듯 흐리게
@@ -123,7 +142,9 @@ export default function(component) {
     const order = N.slice().sort((a, b) => P[b.id].z - P[a.id].z);
     order.forEach((n) => {
       const q = P[n.id], on = (!hasFocus || focus.has(n.id)) && (!data.highlight || n.def), hot = S.hover === n.id;
-      const r = n.size * q.p * (on && hasFocus ? 1.25 : 1) * (hot ? 1.5 : 1) * (0.8 + 0.2 * S.zoom);
+      const k = n.level ? Math.max(0, (ge(n) - 0.75) / 0.25) : ge(n);   // 선이 거의 닿으면 점이 톡 생김(핵은 바로 커짐)
+      if (k <= 0) { n._q = null; return; }   // 아직 안 생긴 점은 누를 수 없음
+      const r = n.size * q.p * (on && hasFocus ? 1.25 : 1) * (hot ? 1.5 : 1) * (0.8 + 0.2 * S.zoom) * k;
       const depth = Math.max(0.25, Math.min(1, q.p * 1.2 - 0.3));
       ctx.globalAlpha = (on ? 1 : 0.18) * depth;
       if (n.level <= 1 || hot || (on && hasFocus && n.level === 2)) { ctx.shadowBlur = hot ? 22 : 14; ctx.shadowColor = n.color; }
@@ -133,29 +154,34 @@ export default function(component) {
     });
     // 이름: 코어·대분류는 항상, 중분류는 대분류 강조 때, 직무는 중분류 강조 때(앞쪽만)
     ctx.textBaseline = 'middle'; ctx.font = data.font;
+    const lab = Math.max(0, (g - 0.85) / 0.15);   // 이름은 다 자란 뒤 서서히
     order.forEach((n) => {
+      if (!lab || !n._q) return;
       const q = P[n.id], on = (!hasFocus || focus.has(n.id)) && (!data.highlight || n.def);
       // 선택·방산 강조 중에는 관련 없는 가지 이름을 숨김(마우스를 올리면 보임, 요청 M5)
       const quiet = hasFocus || data.highlight;
       const show = S.hover === n.id || n.level === 0 || (n.level === 1 && (on || !quiet))
         || (on && quiet && n.level === 2) || (on && data.show_jobs && n.level === 3);
       if (!show || (S.hover !== n.id && q.z > (n.level <= 1 && !hasFocus ? 0.05 : 0.55))) return;   // 대분류 이름은 앞쪽 반구만(겹침 방지)
-      ctx.globalAlpha = (on ? 1 : 0.35) * Math.max(0.35, Math.min(1, q.p * 1.3 - 0.3));
+      ctx.globalAlpha = (on ? 1 : 0.35) * Math.max(0.35, Math.min(1, q.p * 1.3 - 0.3)) * lab;
       ctx.lineWidth = 3; ctx.strokeStyle = C.halo; ctx.fillStyle = C.text;
       const label = n.label, x = q.x + n._r + 5;
       ctx.strokeText(label, x, q.y); ctx.fillText(label, x, q.y);
     });
     ctx.globalAlpha = 1;
   }
+  // 마우스 좌표는 화면 px, 점 위치는 확대 전 px → 비율 확대(요청 AE3) 중에는 그만큼 나눠 맞춘다
+  const local = (ev) => { const b = cv.getBoundingClientRect(), k = b.width / (cv.clientWidth || b.width) || 1;
+    return [(ev.clientX - b.left) / k, (ev.clientY - b.top) / k]; };
   function pick(ev) {
-    const b = cv.getBoundingClientRect(), x = ev.clientX - b.left, y = ev.clientY - b.top;
+    const [x, y] = local(ev);
     let best = null, bd = 1e9;
     N.forEach((n) => { if (!n._q) return; const d = Math.hypot(n._q.x - x, n._q.y - y);
       if (d < Math.max(7, n._r + 3) && n._q.z < bd) { best = n; bd = n._q.z; } });
     return [best, x, y];
   }
   cv.onmousemove = (ev) => {
-    const b = cv.getBoundingClientRect(); S.mx = ev.clientX - b.left; S.my = ev.clientY - b.top;
+    [S.mx, S.my] = local(ev);
     if (S.drag) { S.yaw += (ev.clientX - S.drag.x) * 0.008; S.pitch += (ev.clientY - S.drag.y) * 0.006;
       S.drag = { x: ev.clientX, y: ev.clientY, moved: true }; return; }
     const [n, x, y] = pick(ev);
@@ -219,6 +245,7 @@ def job_graph3d(jobs: pd.DataFrame, *, major: str | None, middle: str | None, hi
         "nodes": out, "links": links, "focus": sorted(focus), "focus_zoom": 1.9 if middle else (1.45 if major else 1), "sway": [0.08, 600] if middle else [0.16, 420], "highlight": bool(highlight_defense),
         "show_jobs": bool(middle), "height": height or G["net_h_max"], "height_min": G["net_h"], "rings": [R1, R2, R3],
         "motion": st.session_state["ui"]["motion"] and not export_mode.on(),
+        "grow_id": st.session_state.get("page_entry"), "grow_ms": theme.MOTION["net_grow_ms"],
         "font": f"700 {theme.px('caption')}px {theme.FONT_SANS}",
         "colors": {"link": charts.c("chart-axis"), "link_on": charts.c("chart-primary"), "text": charts.c("text"),
                    "halo": charts.c("bg"), "ring": charts.c("chart-primary")},

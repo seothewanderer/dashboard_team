@@ -23,5 +23,20 @@ PAGE_INTROS = {
                           "공시 자료를 확인하고 관심 기업을 모아둘 수 있어요."),
 }
 
+# 소개 카드 목차(요청 AB5): 화면의 대표 부분으로 바로 이동. (짧은 이름, 이동할 곳의 CSS 선택자, 접힌 펼치기면 펼칠지 — 요청 AD3)
+# 늘 그려지는 부분만 넣는다(03 '기술을 왜 배우고 어디서 배우나'는 직무를 골랐을 때만 있어 제외)
+PAGE_TOC = {
+    "industry": [("산업 규모", ".st-key-i01_tiles", False), ("활용 분야", ".st-key-chart-card-I02", False),
+                 ("연구 기술", "#sec-rnd", False), ("연구 과제", ".st-key-i03_explore", True)],
+    "jobs": [("직무 네트워크", ".st-key-chart-card-J01", False), ("직무 카드", ".st-key-jobs-cards", True),
+             ("키워드로 찾기", "#sec-j05", False)],
+    "learning": [("지역별 교육", ".st-key-chart-card-s04_region", False), ("키워드로 찾기", "#sec-learn-kw", False),
+                 ("교육 과정", ".st-key-learn_explore", True)],
+    "recruit.postings": [("직무·지역", ".st-key-chart-card-h-job-region", False), ("경력·학력", ".st-key-post_cond_open", True),
+                         ("공고 카드", ".st-key-post-cards", True), ("직무와 공고 비교", "#sec-h06", False)],
+    "recruit.companies": [("분야별 기업", '[class*="st-key-chart-card-C01"]', False),
+                          ("공고 노출", ".st-key-chart-card-c04-exposure", False), ("기업 카드", ".st-key-co_cards_open", True)],
+}
+
 HOME_TITLE = "드론 진로 탐색"
 HOME_SUBTITLE = "산업을 이해하고, 직무와 배움을 연결해 나의 탐색 경로를 만드세요."

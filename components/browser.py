@@ -32,6 +32,21 @@ export default function(component) {
   const { data, parentElement, setStateValue } = component;
   const PATHS = data.paths;
   const themeKey = (p) => `stActiveTheme-${p}-v2`;
+  // 검색란 펼치기 단추(▾/▴)를 열린 상태에서 다시 누르면 닫기(요청 AB1). Streamlit 1.64 콤보박스는 닫혔다가 곧바로 다시 열려
+  // 계속 펼쳐지기만 했다 → 그 누름을 가로채 Esc로 닫는다. 페이지 전체에 한 번만 건다
+  if (!window.__ddComboClose) {
+    window.__ddComboClose = true;
+    document.addEventListener('pointerdown', (e) => {
+      const btn = e.target.closest && e.target.closest(
+        ':is([data-testid="stMultiSelect"], [data-testid="stSelectbox"]) button[aria-haspopup="listbox"]');
+      if (!btn || btn.getAttribute('aria-expanded') !== 'true') return;
+      const input = btn.closest('.react-aria-ComboBox')?.querySelector('input');
+      if (!input) return;
+      e.preventDefault(); e.stopPropagation();
+      input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+      input.blur();
+    }, true);
+  }
   let storageOk = true;
   try { localStorage.setItem('__probe', '1'); localStorage.removeItem('__probe'); } catch (e) { storageOk = false; }
 
@@ -72,6 +87,7 @@ export default function(component) {
       if (active) return;
       if (storageOk && data.save) localStorage.setItem(data.storeKey, data.save);   // 새로고침 전에 최신 상태 저장
       PATHS.forEach((p) => localStorage.setItem(themeKey(p), JSON.stringify(b.dataset.mode)));
+      try { sessionStorage.setItem('drone-theme-reload', window.location.pathname); } catch (e) {}   // 02 네트워크 첫 등장 효과를 다시 틀지 않게
       window.location.reload();
     };
   });
@@ -79,6 +95,54 @@ export default function(component) {
 """
 
 _bridge = st.components.v2.component("browser_bridge", css=_CSS, js=_JS)
+
+
+# 모니터 크기 맞춤(요청 AE3): 창이 기준 폭(1920)보다 넓으면 앱 전체를 비율대로 키운다(최대 1.5배).
+# html에 zoom과 --app-zoom(CSS의 화면 높이 계산·캔버스 해상도용)을 둔다. 실행 맨 앞에서 그려 첫 화면부터 맞춘다
+_ZOOM_JS = """
+export default function(component) {
+  const { data } = component;
+  window.__ddZoomCfg = data;
+  if (window.__ddZoomFit) { window.__ddZoomFit(); return; }
+  const doc = document.documentElement;
+  window.__ddZoomFit = () => {
+    const c = window.__ddZoomCfg, z = Math.min(c.max, Math.max(1, window.innerWidth / c.base));
+    const r = Math.round(z * 1000) / 1000;
+    if (String(r) === doc.style.getPropertyValue('--app-zoom')) return;
+    doc.style.zoom = r === 1 ? '' : String(r);
+    doc.style.setProperty('--app-zoom', String(r));
+    window.__ddZoom = r;
+    window.dispatchEvent(new Event('dd-zoom'));   // 캔버스가 해상도를 다시 맞추게
+  };
+  window.addEventListener('resize', window.__ddZoomFit);
+  // 확대 중 캔버스 선명도: 모든 캔버스(그래프·3D)가 읽는 devicePixelRatio를 배율만큼 크게 알려 준다
+  const dprDesc = Object.getOwnPropertyDescriptor(window, 'devicePixelRatio') || Object.getOwnPropertyDescriptor(Window.prototype, 'devicePixelRatio');
+  if (dprDesc && dprDesc.get) Object.defineProperty(window, 'devicePixelRatio', { configurable: true,
+    get() { return dprDesc.get.call(window) * (window.__ddZoom || 1); } });
+  // 확대 중 그래프(ECharts) 마우스 위치: 브라우저가 주는 offsetX/Y는 확대된 화면 px, 그래프는 확대 전 px로 그려서
+  // 막대를 누르면 한 칸 아래가 골라졌다 → 그래프 안의 마우스 이벤트만 배율로 나눠 준다
+  const fix = (e) => {
+    const z = window.__ddZoom || 1; if (z === 1) return;
+    const t = e.composedPath ? e.composedPath()[0] : e.target;
+    if (!(t instanceof Element) || !t.closest('[_echarts_instance_]')) return;
+    // 그림자 DOM 안의 그래프는 창 단계에서 offsetX가 바깥 틀 기준이 되므로, 실제 대상 위치로 직접 계산
+    const r = t.getBoundingClientRect();
+    Object.defineProperty(e, 'offsetX', { value: (e.clientX - r.left) / z, configurable: true });
+    Object.defineProperty(e, 'offsetY', { value: (e.clientY - r.top) / z, configurable: true });
+  };
+  ['mousemove', 'mousedown', 'mouseup', 'click', 'dblclick', 'contextmenu', 'wheel', 'mousewheel', 'mouseover', 'mouseout',
+   'pointermove', 'pointerdown', 'pointerup', 'pointerover', 'pointerout']   // 누름은 pointer 이벤트로 받는 그래프가 있음
+    .forEach((ev) => window.addEventListener(ev, fix, true));
+  window.__ddZoomFit();
+}
+"""
+
+_zoom = st.components.v2.component("app_zoom", js=_ZOOM_JS)
+
+
+def fit_zoom(base: int, max_zoom: float) -> None:
+    with st.container(key="app-zoom"):
+        _zoom(data={"base": base, "max": max_zoom}, key="app_zoom")
 
 
 def bridge(mode: str, paths: list[str], save_json: str | None, restored: bool):

@@ -11,8 +11,10 @@ from analytics.common import paginate, split_tags
 from analytics.defense import TIER
 from components import cards, charts
 from components.chart_card import chart_card
+from components.note import note
 from components.search_box import search_box
-from components.filters import (as_list, defense_status_line, defense_toggle, goal_status_line, goal_toggle,
+from components.filters import (as_list, card_bar, card_fold, defense_status_line, defense_toggle, goal_status_line, goal_toggle,
+                                highlight_first,
                                 handoff_banner, only_toggle, pager, toggle_value)
 from core import routing
 from core.data_loader import load_table
@@ -26,6 +28,13 @@ BASIS = "co_basis"     # C01 기준(요청 U1)
 BASIS_UNIT = {"companies": "개", "posted": "개", "postings": "건"}
 BASIS_META = {"companies": "C01", "posted": "C01P", "postings": "C01N"}
 COOC_N = 8             # 함께 하는 분야 막대 수(요청 U2)
+CO_WITH, CO_WITH_FOR = "co_with", "co_with_for"   # 함께 하는 분야로 카드 좁히기(요청 AS): 고른 분야 목록 · 그때 왼쪽에서 고른 분야
+CO_OPEN = "co_cards_open"   # 기업 카드 펼치기(요청 X3: 기본 닫힘, 그래프·칩·키워드로 고르면 펼침, 03과 같은 규칙)
+
+
+def _open_cards() -> None:
+    if as_list(st.session_state.get(AREA)) or st.session_state.get(KEYWORD):
+        st.session_state[CO_OPEN] = True
 
 
 def _reveal(hidden: list[str]) -> None:
@@ -49,6 +58,7 @@ def render() -> None:
             st.session_state[MULTI] = len(areas) > 1
             st.session_state[AREA] = areas if len(areas) > 1 else areas[0]
         st.session_state["co_ids"] = handoff.get("company_ids")
+        st.session_state[CO_OPEN] = True                     # 다른 화면에서 고른 채로 왔으면 카드를 펼친 채로
     ids = st.session_state.get("co_ids")
     if ids:
         name = comp.set_index("company_id").loc[ids[0], "company_name_normalized"]
@@ -64,21 +74,30 @@ def render() -> None:
         # 키워드 = 검색 상자(요청 O2): 기업명·사업 분야·드론 세부 분야가 목록으로 뜨고, 목록에 없는 말도 검색
         search_box("키워드", comp["company_name_normalized"].tolist() + [a for ar in comp["areas"] for a in ar]
                    + [s for v in comp["drone_subfields"] for s in split_tags(v)],
-                   key=KEYWORD, placeholder="예: 방제, 매핑, 안티드론 · 입력하거나 펼쳐서 찾기", width=320)
+                   key=KEYWORD, placeholder="예: 방제, 매핑, 안티드론 · 입력하거나 펼쳐서 찾기", width=320,
+                   on_change=_open_cards)
         st.toggle("수집 공고 연결됨", key=POSTED, help="검토 전 연결 후보를 포함합니다.")
         st.toggle("여러 분야 선택", key=MULTI, help="같은 분류 안에서는 '하나 이상'으로 합칩니다.",
                   on_change=_convert_area)
-        defense_toggle()
-        goal_on = goal_toggle()
+        defense_toggle()   # 위 C04 그래프도 바꾸므로 여기 그대로. '목표 직무 관련 강조'는 카드 전용이라 카드 펼치기 위로(요청 AB8)
     defense_status_line()
 
     basis = st.session_state.get(BASIS) or "companies"
     counts = C.area_basis_counts(base, f, basis)       # 기준(요청 U1): 막대 순서·더보기·그중 방산이 기준을 따른다
     result = C.filter_companies(base, f)            # 결과: 전체 필터 → 정렬 → 10개
+    # 함께 하는 분야(오른쪽 아래)로 고른 분야: 왼쪽 분야 선택이 바뀌면 풀림. 카드만 좁힌다(요청 AS)
+    if not f.area or st.session_state.get(CO_WITH_FOR) != tuple(f.area):
+        st.session_state.update({CO_WITH: [], CO_WITH_FOR: tuple(f.area)})
+    with_areas = list(st.session_state.get(CO_WITH) or [])
+    show_all = st.session_state.get("co_area_all", False)
+    hidden = counts.business_category.iloc[TOP_N + PREVIEW_N - 1:].tolist()   # 흐린 맨 아래 줄부터 = 접힌 상태에서 안 보이는 분야
+    # 분야 칩은 그래프 카드 밖, 두 열 위 전체 폭(요청 AG3: 왼쪽 카드가 너무 길어 오른쪽이 비던 문제)
+    with st.container(key="co-area-row", gap="xsmall"):
+        st.html('<p class="filter-label">분야</p>')
+        st.pills("분야", counts.business_category.tolist(), key=AREA, label_visibility="collapsed",
+                 selection_mode="multi" if multi else "single", on_change=lambda: (_reveal(hidden), _open_cards()))
     left, right = st.columns(2, gap="medium")       # C01 : C04 = 5:5 (요청 S2)
     with left:
-        show_all = st.session_state.get("co_area_all", False)
-        hidden = counts.business_category.iloc[TOP_N + PREVIEW_N - 1:].tolist()   # 흐린 맨 아래 줄부터 = 접힌 상태에서 안 보이는 분야
         # 접힌 상태: 다음 분야 2개를 미리 보여 주고 아래로 갈수록 흐리게(01 산업 이해와 같음, 요청 S1)
         view = counts if show_all else counts.head(TOP_N + PREVIEW_N)
         missing = [a for a in f.area if a not in set(view.business_category)]
@@ -96,41 +115,51 @@ def render() -> None:
                                          selected=f.area, note="분야 간 중복 포함")
             with st.container(key="c01-full" if show_all or len(counts) <= TOP_N else "c01-fade"):
                 charts.render(opt, f"c01_area_{basis}", h,
-                              on_click=lambda n: (toggle_value(AREA, n, multi=multi), _reveal(hidden)))
+                              on_click=lambda n: (toggle_value(AREA, n, multi=multi), _reveal(hidden), _open_cards()))
             with st.container(key="c01-more", horizontal=True, horizontal_alignment="center"):
                 st.button("접기" if show_all else f"분야 더보기 (전체 {len(counts)}개)", key="co_area_more",
                           type="secondary", icon=":material/expand_less:" if show_all else ":material/expand_more:",
                           on_click=lambda: st.session_state.update({"co_area_all": not show_all}))
-            st.pills("분야", counts.business_category.tolist(), key=AREA, label_visibility="collapsed",
-                     selection_mode="multi" if multi else "single", on_change=lambda: _reveal(hidden))
-            if f.area:
-                _cooccurrence(base, f, basis)
-    with right:
+    with right:                                      # 공고 노출 + (분야를 고르면) 함께 하는 분야(요청 AG3)
         _exposure(result)
+        if f.area:
+            _cooccurrence(base, f, basis, with_areas)
 
-    # 기업 카드는 펼치기 안(요청 L5): 기본 닫힘, 조건을 고르면 펼친 채로. 안에 '방산 관련만' 필터 토글
+    # 기업 카드는 펼치기 안(요청 L5): 기본 닫힘, 그래프·칩·키워드로 고르면 펼침(요청 X3). 안에 '방산 관련만' 토글 + 정렬 한 줄(요청 X1)
     DEF_ONLY = "companies_only_defense"
+    if with_areas:                                   # 왼쪽 분야 + 함께 하는 분야를 모두 하는 기업만(요청 AS)
+        result = result[result.areas.map(lambda a: set(with_areas) <= set(a))]
     if st.session_state.get(DEF_ONLY):
         result = result[result.defense_group.map(lambda g: bool(TIER.get(g)))]
-    narrowed = len(result) < len(base) or bool(st.session_state.get(DEF_ONLY))
-    with st.expander(f"기업 카드 보기 · {len(result):,}개", expanded=narrowed):
-        only_toggle(DEF_ONLY, "방산 관련만 보기", "defense", "방산 관련 기업·기관 카드만 봅니다. 위 그래프는 그대로입니다.")
-        mode = st.segmented_control("정렬", ["auto", "name"], key=SORT, default="auto", required=True,
-                                    format_func={"auto": "자동(방산 관련 우선)", "name": "이름순"}.get)
+    # 제목·키를 고정해 다시 만들어지지 않게(요청 AB8, 02와 같은 방식). 건수는 안쪽에
+    with card_fold("기업 카드 보기", CO_OPEN):
+        with card_bar("co_page_size", 10, "co_page") as size:
+            only_toggle(DEF_ONLY, "방산 관련만 보기", "defense", "방산 관련 기업·기관 카드만 봅니다. 위 그래프는 그대로입니다.")
+            goal_on = goal_toggle("companies")
+            if with_areas:
+                st.button(f"함께 하는 분야: {' · '.join(with_areas)}", key="co_with_clear", type="secondary",
+                          icon=":material/close:", help="함께 하는 분야 조건을 해제합니다",
+                          on_click=lambda: st.session_state.update({CO_WITH: [], "co_page": 0}))
+            mode = st.segmented_control("정렬", ["auto", "name"], key=SORT, default="auto", required=True,
+                                        label_visibility="collapsed",
+                                        format_func={"auto": "자동(방산 관련 우선)", "name": "이름순"}.get)
         ranked = C.sort_companies(result, f, mode or "auto")
         if goal_on:                                       # 목표 직무 관련 강조(요청 F5)
             goal = st.session_state["plan"]["goal_job_id"]
             ranked = ranked.assign(goal_reason=C.goal_reasons(ranked, {"job_id": goal},
                                                               load_table("bridge_application_job_bridge")))
             goal_status_line(int(ranked.goal_reason.notna().sum()), len(ranked))
-        no = pager("co_page", len(ranked), label="개 기업·기관")   # 이전/다음 10개 + 현재/전체(요청 W2)
-        rows, total = paginate(ranked, no)
-        note = " · 선택 결과 안에서 원문 직접확인 → 교차출처 → 인접 후보 → 미확인 순, 우수성·채용 순위 아님" \
+        ranked = highlight_first(ranked, ranked.defense_group.map(lambda g: bool(TIER.get(g))))   # 관련 카드를 앞으로(요청 AD1)
+        no = pager("co_page", len(ranked), size, label="개 기업·기관")   # 이전/다음 N개 + 현재/전체(요청 W2·AB7)
+        rows, total = paginate(ranked, no, size)
+        # 이름을 note로 쓰면 아래 파란 안내 함수 note()를 가려 0건일 때 오류가 났다(요청 AS 중 발견)
+        order_note = " · 선택 결과 안에서 원문 직접확인 → 교차출처 → 인접 후보 → 미확인 순, 우수성·채용 순위 아님" \
             if C.is_sorted_by_defense(f, mode or "auto") else " · 이름순"
-        st.html(f'<p class="result-count">조건에 맞는 기업·기관 <b>{total}</b>개{escape(note)}</p>')
+        scope = f" · {' · '.join([*f.area, *with_areas])} 모두 하는 곳" if with_areas else ""
+        st.html(f'<p class="result-count">조건에 맞는 기업·기관 <b>{total}</b>개{escape(scope + order_note)}</p>')
         cards.grid(rows, cards.company_card)
         if total == 0:
-            st.info("조건에 맞는 기업이 없습니다. 필터를 해제해 보세요.")
+            note("조건에 맞는 기업이 없습니다. 필터를 해제해 보세요.", box=True)
 
 def _exposure(result: pd.DataFrame) -> None:
     """C04 채용 공고 노출(요청 S3): 방산 강조 꺼짐 = 공고가 연결된 기업·기관 상위 EXPOSE_N(방산은 늘 빨강),
@@ -147,9 +176,9 @@ def _exposure(result: pd.DataFrame) -> None:
                                      tiers=[TIER.get(g) for g in exposed.defense_group])
                 charts.render(opt, "c04_bar", h)
             else:
-                st.caption("조건에 맞는 방산 관련 기업 중 수집 공고가 연결된 곳이 없습니다.")
+                note("조건에 맞는 방산 관련 기업 중 수집 공고가 연결된 곳이 없습니다.")
             if silent:
-                st.caption(f"수집 공고 0건 {len(silent)}곳: " + ", ".join(silent[:8]) + (" 외" if len(silent) > 8 else "")
+                note(f"수집 공고 0건 {len(silent)}곳: " + ", ".join(silent[:8]) + (" 외" if len(silent) > 8 else "")
                            + " · 수집 시점에 공고가 확인되지 않았다는 뜻이며 채용이 없다는 뜻은 아닙니다.")
         return
     exposed = result[result.posting_count.gt(0)].sort_values(["posting_count", "company_name_normalized"],
@@ -164,28 +193,33 @@ def _exposure(result: pd.DataFrame) -> None:
                                  tiers=[TIER.get(g) for g in top.defense_group])
             charts.render(opt, "c04_bar_all", h)
         else:
-            st.caption("조건에 맞는 기업·기관 중 수집 공고가 연결된 곳이 없습니다.")
+            note("조건에 맞는 기업·기관 중 수집 공고가 연결된 곳이 없습니다.")
 
 
-def _pick_area(name: str) -> None:
-    """함께 하는 분야 막대를 누르면 그 분야로 바꿔 본다(여러 분야 선택이면 추가)."""
-    toggle_value(AREA, name, multi=st.session_state.get(MULTI, False))
-    st.session_state["co_area_all"] = True                  # 고른 분야가 접힌 아래쪽이어도 보이게
+def _pick_with(name: str) -> None:
+    """함께 하는 분야 막대를 누르면 왼쪽 분야는 그대로 두고, 기업 카드를 두 분야를 모두 하는 곳으로 좁힌다(요청 AS).
+    다시 누르면 해제, 여러 개 고르면 모두 하는 곳."""
+    now = list(st.session_state.get(CO_WITH) or [])
+    st.session_state.update({CO_WITH: [a for a in now if a != name] if name in now else [*now, name], "co_page": 0})
+    _open_cards()
 
 
-def _cooccurrence(base: pd.DataFrame, f: C.CompanyFilters, basis: str) -> None:
+def _cooccurrence(base: pd.DataFrame, f: C.CompanyFilters, basis: str, with_areas: list[str]) -> None:
     """함께 하는 분야(요청 U2): 고른 분야 기업들이 함께 하는 다른 분야 — 기업의 사업 범위를 보여 준다."""
     posted = basis != "companies"                           # 채용 기준이면 공고가 연결된 기업만 센다(위 그래프와 맞춤)
     co = C.area_cooccurrence(base, C.CompanyFilters(area=f.area, has_posting=f.has_posting or posted, keyword=f.keyword),
                              f.area).head(COOC_N)
     who = "채용 기업·기관" if posted else "기업·기관"
     picked = " · ".join(f.area)
-    st.html(f'<p class="chart-card__subhead">\'{escape(picked)}\' 기업들이 함께 하는 분야</p>')
-    if co.empty:
-        st.caption("고른 분야 기업들이 함께 하는 다른 분야가 없습니다.")
-        return
-    opt, h = charts.overlay_hbar(co.business_category.tolist(), co.n.tolist(), co.defense.tolist(),
-                                 total_name="이 분야도 하는 곳", part_name="그중 방산 관련", unit="개",
-                                 note="막대를 누르면 그 분야로 바꿔 봅니다")
-    charts.render(opt, "c01_cooc", h, on_click=_pick_area)
-    st.caption(f"고른 분야 {who} 중 각 분야도 하는 곳의 수(고유, 상위 {COOC_N}개). 분야 외 조건 적용.")
+    # 오른쪽 열의 따로 된 카드(요청 AG3). 카드 모양만 chart-card 규칙을 씀(그래프 해설은 왼쪽 분야 그래프 것)
+    with st.container(key="chart-card-cooc"):
+        st.html(f'<p class="chart-card__title">\'{escape(picked)}\' 기업들이 함께 하는 분야</p>')
+        if co.empty:
+            note("고른 분야 기업들이 함께 하는 다른 분야가 없습니다.")
+            return
+        opt, h = charts.overlay_hbar(co.business_category.tolist(), co.n.tolist(), co.defense.tolist(),
+                                     total_name="이 분야도 하는 곳", part_name="그중 방산 관련", unit="개",
+                                     selected=with_areas, note="막대를 누르면 기업 카드를 두 분야를 모두 하는 곳으로 좁힙니다")
+        charts.render(opt, "c01_cooc", h, on_click=_pick_with)
+        note(f"고른 분야 {who} 중 각 분야도 하는 곳의 수(고유, 상위 {COOC_N}개). 분야 외 조건 적용. "
+             "막대를 누르면 아래 기업 카드가 두 분야를 모두 하는 곳으로 좁혀집니다(다시 누르면 해제).")

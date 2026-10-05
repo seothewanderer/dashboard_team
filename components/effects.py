@@ -8,7 +8,7 @@ import streamlit as st
 from core import export_mode, theme
 
 _TILES_CSS = """
-.tiles{display:grid;grid-template-columns:repeat(var(--cols),minmax(0,1fr));gap:var(--gutter);font-family:var(--font-sans)}
+.tiles{display:grid;grid-template-columns:repeat(var(--cols),minmax(0,1fr));gap:var(--gutter);font-family:var(--font-sans);container-type:inline-size}
 .tile{background:var(--surface);border-radius:var(--radius-md);padding:var(--space-lg);display:flex;flex-direction:column;gap:var(--space-xs);
   opacity:0;transform:translateY(var(--space-xs));animation:rise var(--rise) var(--ease-standard) forwards;
   transition:background var(--duration-base) var(--ease-standard),transform var(--duration-fast) var(--ease-standard)}
@@ -30,6 +30,10 @@ _TILES_CSS = """
 .kpi--defense .ico::before{background:var(--defense-strong)}
 .kpi--defense .value,.tile.kpi--defense:hover .value{color:var(--defense-strong)}
 @keyframes rise{to{opacity:1;transform:none}}
+/* KPI 카드 영역이 좁을 때: 아이콘·여백·숫자를 한 단계 줄여 숫자가 칸을 넘지 않게(v5 렌더링 맞춤) */
+@container (max-width:820px){.tile.kpi,.tile--kpi{padding:var(--space-sm) var(--space-md);gap:var(--space-sm)}.ico,.tile__ico{width:calc(var(--kpi-icon) * .75);height:calc(var(--kpi-icon) * .75)}.ico::before,.tile__ico::before{width:calc(var(--kpi-glyph) * .75);height:calc(var(--kpi-glyph) * .75)}.kpi .value,.tile--kpi .tile__value{font-size:calc(var(--type-kpi-size) * .82)}.kpi .label,.tile--kpi .tile__label{font-size:calc(var(--type-card-title-size) * .9)}}
+/* 더 좁을 때(카드 3~4개가 한 줄에 160px 안팎): 아이콘을 위로 올려 글자 폭을 확보(v5 렌더링 맞춤) */
+@container (max-width:600px){.tile.kpi,.tile--kpi{flex-direction:column;align-items:flex-start;padding:var(--space-sm)}}
 @media (max-width:1024px){.tiles{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media (max-width:767px){.tiles{grid-template-columns:1fr}}
 @media (prefers-reduced-motion:reduce){.tile{animation:none;opacity:1;transform:none}.tile:hover{transform:none}}

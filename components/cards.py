@@ -1,7 +1,8 @@
 """공통 카드 (research 3.4, plan.md 8.2). 앞면: 필수 정보 + 스크랩 + 대표 행동 1개. 상세는 dialogs.
 
 방산 관련 카드(기업·공고 = 방산 근거 기업, 직무 = 방산기업 근무처)는 항상 빨강 테두리·띠 + 배지(요청 F2·F6).
-방산 강조(ui.highlight_defense)를 켜면 일반 카드를 흐리게 한다. 건수·순서는 바꾸지 않는다(DESIGN §9.2).
+방산 강조(ui.highlight_defense)를 켜면 일반 카드를 흐리게 한다. 건수는 바꾸지 않고, 순서는 관련 카드를 앞으로
+(filters.highlight_first, 요청 AD1 — 예전 DESIGN §9.2 '순서 불변'을 사용자 요청으로 바꿈).
 목표 직무 관련 강조(ui.highlight_goal, 요청 F5)를 켜면 row.goal_reason이 있는 카드는 녹색 띠 + 이유 배지,
 없는 카드는 옅게. goal_reason 열이 없으면(판단하지 않는 화면) 표시하지 않는다.
 """
@@ -59,17 +60,16 @@ def _body(title: str, eyebrow: str, lines: list[str], tags_html: str = "", meta:
             + (f'<p class="card__meta">{meta}</p>' if meta else "") + "</div>")
 
 
-def job_card(row: pd.Series, scope: str = "") -> None:
-    """scope: 같은 화면에 같은 직무 카드가 두 번 나올 때 위젯 키를 구분(예: 02의 J05 결과)."""
+def job_card(row: pd.Series) -> None:
     goal = st.session_state["plan"]["goal_job_id"] == row.job_id
-    with st.container(key=_frame_key("job", row.job_id, bool(row.defense_workplace), picked=goal) + scope):
+    with st.container(key=_frame_key("job", row.job_id, bool(row.defense_workplace), picked=goal)):
         _body(row.job_title_ko, f"{row.major_category} · {row.middle_category}",
               [row.core_duties, f"근무처 {workplaces_summary(row)}"],
               defense_job_badge(row.defense_workplace) + _tags(row.skills), escape(row.evidence_type))
-        with st.container(horizontal=True, key=f"job-actions-{row.job_id}{scope}"):
-            st.button("상세 보기", key=f"job:{row.job_id}:open{scope}", type="tertiary", icon=":material/open_in_full:",
+        with st.container(horizontal=True, key=f"job-actions-{row.job_id}"):
+            st.button("상세 보기", key=f"job:{row.job_id}:open", type="tertiary", icon=":material/open_in_full:",
                       on_click=dialogs.open_dialog, args=("job", row.job_id))
-            icon_button("star", goal, "선택됨" if goal else "해당 직무 선택", f"job:{row.job_id}:goal{scope}",   # 요청 L2
+            icon_button("star", goal, "선택됨" if goal else "해당 직무 선택", f"job:{row.job_id}:goal",   # 요청 L2
                         on_click=state.select_goal, args=(None if goal else row.job_id, row.job_title_ko))
 
 

@@ -4,11 +4,15 @@
  * 바꾼 부분: 화면 전체 상태(S·render·#main) → 이 부품 안 상태(G·HM)와 setStateValue/setTriggerValue,
  *   Three.js CDN → static/vendor/three, 테마 = 토큰 값(core/theme.py --hm-*),
  *   패널을 누르면 그쪽으로 날아간 뒤 그 화면으로 이동(팀원 판은 제자리 반응만) + 홈에 다시 오면 같은 방향에서 돌아옴.
- * 3D renderer·canvas·루프는 창(window)에 하나만 두고 홈에 다시 들어와도 다시 쓴다. */
+ * 3D renderer·canvas·루프는 창(window)에 하나만 두고 홈에 다시 들어와도 다시 쓴다.
+ * HTML 공유본(scripts/build_interactive.py)도 이 파일을 그대로 쓴다: window.__ddThreeSrc에 Three.js 글이 있으면 그것으로 불러온다. */
 function createEngine() {
   "use strict";
   const ROTOR_REV_PER_SEC = 3.0;
   const reduce = window.matchMedia("(prefers-reduced-motion: reduce)");
+  // 모니터 크기 맞춤(요청 AE3): 앱 전체를 비율 확대(html zoom)하면 getBoundingClientRect·마우스 좌표는 확대된 화면 px,
+  // clientWidth·offset은 확대 전 px이다. 화면 px로 계산한 비행 경로는 ZF()로 나눈다(해상도는 browser.py가 devicePixelRatio로 맞춤)
+  const ZF = () => window.__ddZoom || 1;
   const FALLBACK_SVG = "<svg class=\"hm-svg\" viewBox=\"0 0 320 200\" aria-hidden=\"true\"><defs><linearGradient id=\"hd-shell\" x1=\"0\" y1=\"0\" x2=\"0.35\" y2=\"1\"><stop offset=\"0\" stop-color=\"#7b818a\"/><stop offset=\".55\" stop-color=\"#4c5158\"/><stop offset=\"1\" stop-color=\"#33373d\"/></linearGradient><linearGradient id=\"hd-face\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\"><stop offset=\"0\" stop-color=\"#2d3136\"/><stop offset=\"1\" stop-color=\"#15171a\"/></linearGradient><linearGradient id=\"hd-motor\" x1=\"0\" y1=\"0\" x2=\"1\" y2=\"0\"><stop offset=\"0\" stop-color=\"#1a1c1f\"/><stop offset=\".28\" stop-color=\"#6d737b\"/><stop offset=\".5\" stop-color=\"#3a3e44\"/><stop offset=\"1\" stop-color=\"#101113\"/></linearGradient><radialGradient id=\"hd-motor-top\" cx=\".35\" cy=\".3\" r=\".8\"><stop offset=\"0\" stop-color=\"#8a9098\"/><stop offset=\"1\" stop-color=\"#2a2d32\"/></radialGradient><radialGradient id=\"hd-disc\" r=\".5\"><stop offset=\".08\" stop-color=\"#9aa1aa\" stop-opacity=\"0\"/><stop offset=\".6\" stop-color=\"#9aa1aa\" stop-opacity=\".07\"/><stop offset=\".97\" stop-color=\"#c9ced4\" stop-opacity=\".16\"/><stop offset=\"1\" stop-color=\"#c9ced4\" stop-opacity=\"0\"/></radialGradient><linearGradient id=\"hd-blade\" x1=\"0\" y1=\"-1\" x2=\"0\" y2=\"1\"><stop offset=\"0\" stop-color=\"#6a7078\"/><stop offset=\".5\" stop-color=\"#34383e\"/><stop offset=\"1\" stop-color=\"#1b1d20\"/></linearGradient><radialGradient id=\"hd-glass\" cx=\".38\" cy=\".35\" r=\".7\"><stop offset=\"0\" stop-color=\"#6fa8d8\"/><stop offset=\".25\" stop-color=\"#1d3f63\"/><stop offset=\".7\" stop-color=\"#0a1522\"/><stop offset=\"1\" stop-color=\"#030609\"/></radialGradient><filter id=\"hd-soft\" x=\"-50%\" y=\"-50%\" width=\"200%\" height=\"200%\"><feGaussianBlur stdDeviation=\"6\"/></filter><filter id=\"hd-glow\" x=\"-200%\" y=\"-200%\" width=\"500%\" height=\"500%\"><feGaussianBlur stdDeviation=\"1.6\"/></filter></defs><ellipse cx=\"160\" cy=\"184\" rx=\"112\" ry=\"9\" class=\"hm-sv-shadow\"/><g class=\"hm-sv-body\"><path d=\"M132,84 L90,67.0\" class=\"hm-sv-arm-under\"/><path d=\"M132,82.5 L90,65.5\" class=\"hm-sv-arm-top\"/><circle cx=\"90\" cy=\"74\" r=\"2.2\" class=\"hm-sv-led hm-sv-ccw\"/><path d=\"M188,84 L230,67.0\" class=\"hm-sv-arm-under\"/><path d=\"M188,82.5 L230,65.5\" class=\"hm-sv-arm-top\"/><circle cx=\"230\" cy=\"74\" r=\"2.2\" class=\"hm-sv-led hm-sv-cw\"/><ellipse cx=\"90\" cy=\"71\" rx=\"10.0\" ry=\"3.6\" class=\"hm-sv-mount\"/><path d=\"M83.0,60 L83.0,70 A7.0,2.1 0 0 0 97.0,70 L97.0,60 Z\" fill=\"url(#hd-motor)\"/><path d=\"M83.0,64.5 A7.0,2.1 0 0 0 97.0,64.5\" class=\"hm-sv-band\"/><ellipse cx=\"90\" cy=\"60\" rx=\"7.0\" ry=\"2.1\" fill=\"url(#hd-motor-top)\"/><ellipse cx=\"90\" cy=\"60\" rx=\"3.15\" ry=\"0.9450000000000001\" class=\"hm-sv-bell\"/><ellipse cx=\"230\" cy=\"71\" rx=\"10.0\" ry=\"3.6\" class=\"hm-sv-mount\"/><path d=\"M223.0,60 L223.0,70 A7.0,2.1 0 0 0 237.0,70 L237.0,60 Z\" fill=\"url(#hd-motor)\"/><path d=\"M223.0,64.5 A7.0,2.1 0 0 0 237.0,64.5\" class=\"hm-sv-band\"/><ellipse cx=\"230\" cy=\"60\" rx=\"7.0\" ry=\"2.1\" fill=\"url(#hd-motor-top)\"/><ellipse cx=\"230\" cy=\"60\" rx=\"3.15\" ry=\"0.9450000000000001\" class=\"hm-sv-bell\"/><g transform=\"translate(90 57) scale(1 0.3)\"><circle r=\"40\" class=\"hm-sv-disc\"/><g class=\"hm-sv-rotor hm-sv-r2\"><g transform=\"rotate(32)\" class=\"hm-sv-ghost hm-sv-g2\"><path d=\"M3,-2.6 C12.0,-7.5 28.8,-6.2 38.0,-2.6 Q41.0,0 38.0,2.2 C28.0,4.2 12.0,4 3,2.6 Z\"/><path d=\"M3,-2.6 C12.0,-7.5 28.8,-6.2 38.0,-2.6 Q41.0,0 38.0,2.2 C28.0,4.2 12.0,4 3,2.6 Z\" transform=\"rotate(180)\"/></g><g transform=\"rotate(16)\" class=\"hm-sv-ghost\"><path d=\"M3,-2.6 C12.0,-7.5 28.8,-6.2 38.0,-2.6 Q41.0,0 38.0,2.2 C28.0,4.2 12.0,4 3,2.6 Z\"/><path d=\"M3,-2.6 C12.0,-7.5 28.8,-6.2 38.0,-2.6 Q41.0,0 38.0,2.2 C28.0,4.2 12.0,4 3,2.6 Z\" transform=\"rotate(180)\"/></g><g transform=\"rotate(0)\" class=\"hm-sv-blade\"><path d=\"M3,-2.6 C12.0,-7.5 28.8,-6.2 38.0,-2.6 Q41.0,0 38.0,2.2 C28.0,4.2 12.0,4 3,2.6 Z\"/><path d=\"M3,-2.6 C12.0,-7.5 28.8,-6.2 38.0,-2.6 Q41.0,0 38.0,2.2 C28.0,4.2 12.0,4 3,2.6 Z\" transform=\"rotate(180)\"/></g><circle r=\"4.5\" class=\"hm-sv-spinner\"/></g></g><ellipse cx=\"90\" cy=\"56\" rx=\"2.6\" ry=\"1.4\" class=\"hm-sv-shaft\"/><g transform=\"translate(230 57) scale(1 0.3)\"><circle r=\"40\" class=\"hm-sv-disc\"/><g class=\"hm-sv-rotor\"><g transform=\"rotate(-32)\" class=\"hm-sv-ghost hm-sv-g2\"><path d=\"M3,-2.6 C12.0,-7.5 28.8,-6.2 38.0,-2.6 Q41.0,0 38.0,2.2 C28.0,4.2 12.0,4 3,2.6 Z\"/><path d=\"M3,-2.6 C12.0,-7.5 28.8,-6.2 38.0,-2.6 Q41.0,0 38.0,2.2 C28.0,4.2 12.0,4 3,2.6 Z\" transform=\"rotate(180)\"/></g><g transform=\"rotate(-16)\" class=\"hm-sv-ghost\"><path d=\"M3,-2.6 C12.0,-7.5 28.8,-6.2 38.0,-2.6 Q41.0,0 38.0,2.2 C28.0,4.2 12.0,4 3,2.6 Z\"/><path d=\"M3,-2.6 C12.0,-7.5 28.8,-6.2 38.0,-2.6 Q41.0,0 38.0,2.2 C28.0,4.2 12.0,4 3,2.6 Z\" transform=\"rotate(180)\"/></g><g transform=\"rotate(0)\" class=\"hm-sv-blade\"><path d=\"M3,-2.6 C12.0,-7.5 28.8,-6.2 38.0,-2.6 Q41.0,0 38.0,2.2 C28.0,4.2 12.0,4 3,2.6 Z\"/><path d=\"M3,-2.6 C12.0,-7.5 28.8,-6.2 38.0,-2.6 Q41.0,0 38.0,2.2 C28.0,4.2 12.0,4 3,2.6 Z\" transform=\"rotate(180)\"/></g><circle r=\"4.5\" class=\"hm-sv-spinner\"/></g></g><ellipse cx=\"230\" cy=\"56\" rx=\"2.6\" ry=\"1.4\" class=\"hm-sv-shaft\"/><path d=\"M110,100 Q160,111 210,100 L204,119 Q160,131 116,119 Z\" fill=\"url(#hd-face)\"/><path d=\"M128,79 Q160,70 192,79 L210,100 Q160,111 110,100 Z\" fill=\"url(#hd-shell)\" class=\"hm-sv-hull\"/><path d=\"M134,84 Q160,77 186,84 L196,97 Q160,104 124,97 Z\" class=\"hm-sv-panel\"/><path d=\"M140,86 Q160,81 180,86\" class=\"hm-sv-vent\"/><path d=\"M137,90 Q160,85 183,90\" class=\"hm-sv-vent\"/><ellipse cx=\"146\" cy=\"84\" rx=\"16\" ry=\"4\" class=\"hm-sv-spec\" filter=\"url(#hd-glow)\"/><path d=\"M110,100 Q160,111 210,100\" class=\"hm-sv-edge\"/><ellipse cx=\"146\" cy=\"113\" rx=\"5\" ry=\"3.2\" class=\"hm-sv-sensor\"/><ellipse cx=\"174\" cy=\"113\" rx=\"5\" ry=\"3.2\" class=\"hm-sv-sensor\"/><ellipse cx=\"144.8\" cy=\"112.2\" rx=\"1.6\" ry=\"1\" class=\"hm-sv-glint\"/><ellipse cx=\"172.8\" cy=\"112.2\" rx=\"1.6\" ry=\"1\" class=\"hm-sv-glint\"/><path d=\"M114,110 L58,119.1\" class=\"hm-sv-arm-under\"/><path d=\"M114,108.5 L58,117.6\" class=\"hm-sv-arm-top\"/><circle cx=\"58\" cy=\"127\" r=\"2.2\" class=\"hm-sv-led hm-sv-cw\"/><path d=\"M206,110 L262,119.1\" class=\"hm-sv-arm-under\"/><path d=\"M206,108.5 L262,117.6\" class=\"hm-sv-arm-top\"/><circle cx=\"262\" cy=\"127\" r=\"2.2\" class=\"hm-sv-led hm-sv-ccw\"/><ellipse cx=\"58\" cy=\"124\" rx=\"12.0\" ry=\"4.199999999999999\" class=\"hm-sv-mount\"/><path d=\"M49.0,110 L49.0,123 A9.0,2.6999999999999997 0 0 0 67.0,123 L67.0,110 Z\" fill=\"url(#hd-motor)\"/><path d=\"M49.0,115.85 A9.0,2.6999999999999997 0 0 0 67.0,115.85\" class=\"hm-sv-band\"/><ellipse cx=\"58\" cy=\"110\" rx=\"9.0\" ry=\"2.6999999999999997\" fill=\"url(#hd-motor-top)\"/><ellipse cx=\"58\" cy=\"110\" rx=\"4.05\" ry=\"1.2149999999999999\" class=\"hm-sv-bell\"/><ellipse cx=\"262\" cy=\"124\" rx=\"12.0\" ry=\"4.199999999999999\" class=\"hm-sv-mount\"/><path d=\"M253.0,110 L253.0,123 A9.0,2.6999999999999997 0 0 0 271.0,123 L271.0,110 Z\" fill=\"url(#hd-motor)\"/><path d=\"M253.0,115.85 A9.0,2.6999999999999997 0 0 0 271.0,115.85\" class=\"hm-sv-band\"/><ellipse cx=\"262\" cy=\"110\" rx=\"9.0\" ry=\"2.6999999999999997\" fill=\"url(#hd-motor-top)\"/><ellipse cx=\"262\" cy=\"110\" rx=\"4.05\" ry=\"1.2149999999999999\" class=\"hm-sv-bell\"/><rect x=\"150\" y=\"124\" width=\"20\" height=\"7\" rx=\"2.5\" class=\"hm-sv-gimbal\"/><rect x=\"148\" y=\"129\" width=\"24\" height=\"17\" rx=\"5\" fill=\"url(#hd-face)\" class=\"hm-sv-gimbal\"/><circle cx=\"160\" cy=\"137.5\" r=\"7\" class=\"hm-sv-lens\"/><circle cx=\"160\" cy=\"137.5\" r=\"5.4\" fill=\"url(#hd-glass)\"/><circle cx=\"158\" cy=\"135.4\" r=\"1.4\" class=\"hm-sv-glint\"/><g transform=\"translate(58 107) scale(1 0.3)\"><circle r=\"50\" class=\"hm-sv-disc\"/><g class=\"hm-sv-rotor\"><g transform=\"rotate(-32)\" class=\"hm-sv-ghost hm-sv-g2\"><path d=\"M3,-2.6 C15.0,-7.5 36.0,-6.2 48.0,-2.6 Q51.0,0 48.0,2.2 C35.0,4.2 15.0,4 3,2.6 Z\"/><path d=\"M3,-2.6 C15.0,-7.5 36.0,-6.2 48.0,-2.6 Q51.0,0 48.0,2.2 C35.0,4.2 15.0,4 3,2.6 Z\" transform=\"rotate(180)\"/></g><g transform=\"rotate(-16)\" class=\"hm-sv-ghost\"><path d=\"M3,-2.6 C15.0,-7.5 36.0,-6.2 48.0,-2.6 Q51.0,0 48.0,2.2 C35.0,4.2 15.0,4 3,2.6 Z\"/><path d=\"M3,-2.6 C15.0,-7.5 36.0,-6.2 48.0,-2.6 Q51.0,0 48.0,2.2 C35.0,4.2 15.0,4 3,2.6 Z\" transform=\"rotate(180)\"/></g><g transform=\"rotate(0)\" class=\"hm-sv-blade\"><path d=\"M3,-2.6 C15.0,-7.5 36.0,-6.2 48.0,-2.6 Q51.0,0 48.0,2.2 C35.0,4.2 15.0,4 3,2.6 Z\"/><path d=\"M3,-2.6 C15.0,-7.5 36.0,-6.2 48.0,-2.6 Q51.0,0 48.0,2.2 C35.0,4.2 15.0,4 3,2.6 Z\" transform=\"rotate(180)\"/></g><circle r=\"4.5\" class=\"hm-sv-spinner\"/></g></g><ellipse cx=\"58\" cy=\"106\" rx=\"2.6\" ry=\"1.4\" class=\"hm-sv-shaft\"/><g transform=\"translate(262 107) scale(1 0.3)\"><circle r=\"50\" class=\"hm-sv-disc\"/><g class=\"hm-sv-rotor hm-sv-r2\"><g transform=\"rotate(32)\" class=\"hm-sv-ghost hm-sv-g2\"><path d=\"M3,-2.6 C15.0,-7.5 36.0,-6.2 48.0,-2.6 Q51.0,0 48.0,2.2 C35.0,4.2 15.0,4 3,2.6 Z\"/><path d=\"M3,-2.6 C15.0,-7.5 36.0,-6.2 48.0,-2.6 Q51.0,0 48.0,2.2 C35.0,4.2 15.0,4 3,2.6 Z\" transform=\"rotate(180)\"/></g><g transform=\"rotate(16)\" class=\"hm-sv-ghost\"><path d=\"M3,-2.6 C15.0,-7.5 36.0,-6.2 48.0,-2.6 Q51.0,0 48.0,2.2 C35.0,4.2 15.0,4 3,2.6 Z\"/><path d=\"M3,-2.6 C15.0,-7.5 36.0,-6.2 48.0,-2.6 Q51.0,0 48.0,2.2 C35.0,4.2 15.0,4 3,2.6 Z\" transform=\"rotate(180)\"/></g><g transform=\"rotate(0)\" class=\"hm-sv-blade\"><path d=\"M3,-2.6 C15.0,-7.5 36.0,-6.2 48.0,-2.6 Q51.0,0 48.0,2.2 C35.0,4.2 15.0,4 3,2.6 Z\"/><path d=\"M3,-2.6 C15.0,-7.5 36.0,-6.2 48.0,-2.6 Q51.0,0 48.0,2.2 C35.0,4.2 15.0,4 3,2.6 Z\" transform=\"rotate(180)\"/></g><circle r=\"4.5\" class=\"hm-sv-spinner\"/></g></g><ellipse cx=\"262\" cy=\"106\" rx=\"2.6\" ry=\"1.4\" class=\"hm-sv-shaft\"/></g></svg>";
   const ICONS = '<svg class="hm-toggle__icon hm-toggle__icon--pause" viewBox="0 0 16 16" aria-hidden="true"><rect x="4" y="3" width="2.4" height="10" rx="1"/><rect x="9.6" y="3" width="2.4" height="10" rx="1"/></svg>'
     + '<svg class="hm-toggle__icon hm-toggle__icon--play" viewBox="0 0 16 16" aria-hidden="true"><path d="M5 3.2v9.6a.6.6 0 0 0 .9.5l7.6-4.8a.6.6 0 0 0 0-1L5.9 2.7a.6.6 0 0 0-.9.5z"/></svg>';
@@ -269,7 +273,8 @@ function createEngine() {
       if (!stage || !cv) return;
       const w = stage.clientWidth, h = stage.clientHeight; if (!w || !h) return;
       dpr = Math.min(window.devicePixelRatio || 1, 2); lite = w < 700;
-      if (w !== W || h !== H || cv.width !== Math.round(w * dpr)) { W = w; H = h; cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr); }
+      if (w !== W || h !== H || cv.width !== Math.round(w * dpr)) { W = w; H = h; cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr);
+        if (col) draw(performance.now()); }   // 크기를 바꾸면 캔버스가 지워지므로 바로 다시 그림(탐색 경로 열고 닫는 동안 배경이 깜빡이지 않게, 요청 AA7)
       dirty = true;
     }
     function mount(st) {
@@ -575,6 +580,10 @@ function createEngine() {
   /* ---------------- 부품을 그릴 때마다: 처음이면 화면을 만들고 무대를 연결, 진입·복귀 비행 요청을 확인 ---------------- */
   const io = new IntersectionObserver((es) => { inView = es[es.length - 1].isIntersecting; updateVisible(); });
   const stageRO = new ResizeObserver(() => { AIR.resize(); updateDroneRect(); if (HM.open) layoutGuides(); });
+  window.addEventListener("dd-zoom", () => {                                   // 비율 확대가 바뀌면 캔버스 해상도를 다시(요청 AE3)
+    if (HM.three && !HM.three.flying) { HM.three.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2)); HM.three.fit(true); }
+    AIR.resize(); wake();
+  });
   function updateDroneRect() { if (HM.core) AIR.setDrone({ cx: HM.core.offsetLeft, cy: HM.core.offsetTop, hw: HM.core.offsetWidth * 0.72 * 1.2, hh: HM.core.offsetHeight * 0.66 * 1.2 }); }   // 커진 기체만큼 배경 점·라벨 비켜 두는 영역도 확대
   const onKey = (e) => { if (e.key === "Escape" && HM.open && HM.phase === "idle" && HM.stage && HM.stage.isConnected) closeMenu(); };
   function mount(component) {
@@ -678,7 +687,9 @@ function createEngine() {
   let threeLib = null;
   function loadThree() {
     if (threeLib) return threeLib;
-    const get = (f) => fetch(G.vendor + f).then((r) => { if (!r.ok) throw new Error(`${f} ${r.status}`); return r.text(); });
+    const inline = window.__ddThreeSrc;                                       // HTML 공유본: 파일 안에 넣어 둔 글(인터넷·서버 없이)
+    const get = (f) => (inline && inline[f] != null ? Promise.resolve(inline[f])
+      : fetch(G.vendor + f).then((r) => { if (!r.ok) throw new Error(`${f} ${r.status}`); return r.text(); }));
     const url = (src) => URL.createObjectURL(new Blob([src], { type: "text/javascript" }));
     threeLib = get("three.module.js").then((core) => {
       const coreUrl = url(core);
@@ -904,12 +915,14 @@ function createEngine() {
     const CANVAS_K = 2.35;                                                    // .hm-canvas = 드론 버튼의 235%
     three.track = () => { if (!three.staged || !HM.core || !HM.core.isConnected) return; const cr = HM.core.getBoundingClientRect(), w = cr.width * CANVAS_K, h = cr.height * CANVAS_K;
       if (!w || !h) return; camera.aspect = w / h;
-      camera.setViewOffset(w, h, -(cr.left + cr.width / 2 - w / 2), -(cr.top + cr.height / 2 - h / 2), canvas.clientWidth || window.innerWidth, canvas.clientHeight || window.innerHeight); };
+      const cv = canvas.getBoundingClientRect();   // 화면 px(비율 확대 반영)
+      camera.setViewOffset(w, h, -(cr.left + cr.width / 2 - w / 2), -(cr.top + cr.height / 2 - h / 2), cv.width || window.innerWidth, cv.height || window.innerHeight); };
     three.viewIn = () => { const cr = HM.core && HM.core.getBoundingClientRect(); if (!cr || !cr.width) return null;
       const vw = document.documentElement.clientWidth, vh = window.innerHeight;
       three.flying = three.staged = true; document.body.appendChild(canvas);
-      canvas.style.cssText = `position:fixed;left:0;top:0;width:${vw}px;height:${vh}px;transform:none;opacity:1;z-index:45;pointer-events:none`;
-      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5)); renderer.setSize(vw, vh, false); three.track();
+      const z = ZF();                                                    // 확대 중에는 CSS 크기를 배율로 나눠 화면을 꼭 채움
+      canvas.style.cssText = `position:fixed;left:0;top:0;width:${vw / z}px;height:${vh / z}px;transform:none;opacity:1;z-index:45;pointer-events:none`;
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5)); renderer.setSize(vw / z, vh / z, false); three.track();
       return { cx: cr.left + cr.width / 2, cy: cr.top + cr.height / 2, vw, vh, canvasW: cr.width * CANVAS_K }; };
     three.viewOut = () => { if (!three.staged) return; three.staged = three.flying = false; canvas.style.cssText = ""; camera.clearViewOffset();
       renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2)); lastW = lastH = 0;
@@ -974,6 +987,28 @@ function createEngine() {
     return { x: 0, y: -2.5 * Math.sin(Math.PI * a), z: E.zA + (REST_Z - E.zA) * e, s: 0.85 + 0.15 * e, k: 1, ph: "approaching" };
   }
   function finishEntry() { if (!entry) return; entry = null; if (HM.three) HM.three.viewOut(); uncls("is-arriving"); setMode("hovering"); }
+  /* 탐색 경로 열고 닫기 반응(요청 AA8, 신호 'dd-roadmap'은 components/shell.py 단추가 보냄)
+   * 열림 = 오른쪽에서 들어온 패널에 한 대 맞은 듯 왼쪽으로 밀렸다가 휘청이며 제자리로(덜 감쇠된 스프링 + 왼쪽 충격).
+   * 닫힘 = 무대가 넓어지는 동안 원래 화면 위치에 남아 있다가 조금 늦게 가운데를 찾아감(따라가는 스프링).
+   * 자세: 밀리는 속도 방향으로 기울고(roll) 고개를 조금 돌림(yaw). 움직임 멈춤·동작 줄이기·비행·메뉴 전환 중에는 없음 */
+  const BUMP = { open: { v: -900, w: 6.5, z: 0.32 }, close: { w: 4.2, z: 0.85, track: 450 } };
+  const bump = { x: 0, v: 0, w: 0, z: 0, track: 0, cx: 0 };
+  const coreCx = () => { const r = HM.core.getBoundingClientRect(); return r.left + r.width / 2; };
+  window.addEventListener("dd-roadmap", (e) => {
+    if (!HM.core || !HM.core.isConnected || reduce.matches || !G.motion || entry || fl || HM.phase !== "idle") return;
+    const P = e.detail.open ? BUMP.open : BUMP.close;
+    bump.w = P.w; bump.z = P.z;
+    if (e.detail.open) bump.v += P.v;
+    else { bump.track = performance.now() + P.track; bump.cx = coreCx(); }
+    wake();
+  });
+  function stepBump(now, dt) {
+    if (bump.track) { const c = coreCx(); bump.x -= (c - bump.cx) / ZF(); bump.cx = c; if (now > bump.track) bump.track = 0; }   // 무대 가운데가 움직인 만큼 반대로 → 화면 위치 유지
+    if (!bump.w) return;
+    const ds = Math.min(0.05, dt || 0);
+    bump.v += (-bump.w * bump.w * bump.x - 2 * bump.z * bump.w * bump.v) * ds; bump.x += bump.v * ds;
+    if (!bump.track && Math.abs(bump.x) < 0.3 && Math.abs(bump.v) < 3) bump.x = bump.v = bump.w = 0;
+  }
   function idleSway(t) {
     const w1 = 2 * Math.PI / 4.3, w2 = 2 * Math.PI / 7.1, A1 = 2.0, A2 = 0.8, s1 = Math.sin(w1 * t + 0.4), s2 = Math.sin(w2 * t + 2.1);
     const acc = A1 * w1 * w1 * s1 + A2 * w2 * w2 * s2;                         // = -(가로 가속도)
@@ -996,7 +1031,7 @@ function createEngine() {
       const vx = (pb.x - pa.x) / sd, vy = (pb.y - pa.y) / sd, vz = (pb.z - pa.z) / sd, ax = ta < t1 && tb > t1 ? (pb.x - 2 * p.x + pa.x) / (hs * hs) : 0;
       const mode = p.ph === "descent" ? (E.kind === "first" ? "entering" : "returningHome") : p.ph;
       if (HM.mode !== mode) { setMode(mode); if (mode === "approaching") uncls("is-arriving"); }   // 추가 접근과 함께 ring이 나타남
-      eX = p.x; eY = p.y; eZ = p.z - REST_Z;
+      eX = p.x / ZF(); eY = p.y / ZF(); eZ = p.z - REST_Z;   // 경로는 화면 px → 확대 전 px
       eYaw = clampv(vx * 0.03, -24, 24);                                      // 진행 방향으로 기수를 돌림(선회)
       eR = clampv(-(vx * 0.013 + ax * 0.0014), -14, 14);                       // 선회·감속 bank
       eP = clampv(vz * 3, -8, 8) + clampv(vy * 0.005, -3, 3);                  // 다가올 때·내려올 때 앞으로 숙임
@@ -1007,7 +1042,7 @@ function createEngine() {
       const F = fl, t1 = clampv(now - F.t0, 0, F.dur), hh = 40, ta = Math.max(0, t1 - hh), tb = Math.min(F.dur, t1 + hh);
       const p = flightPose(F, t1), pa = flightPose(F, ta), pb = flightPose(F, tb), sd = Math.max(1e-3, (tb - ta) / 1000), hs = hh / 1000;
       const vx = (pb.x - pa.x) / sd, vy = (pb.y - pa.y) / sd, vz = (pb.z - pa.z) / sd, ax = ta < t1 && tb > t1 ? (pb.x - 2 * p.x + pa.x) / (hs * hs) : 0;
-      eX = p.x; eY = p.y; eZ = p.z - st.z;
+      eX = p.x / ZF(); eY = p.y / ZF(); eZ = p.z - st.z;
       eYaw = clampv(vx * 0.03 + F.ux * 10 * clamp01(t1 / F.turn), -24, 24);  // 출발 전 그쪽으로 고개를 돌리고, 날며 진행 방향으로
       eR = clampv(-(vx * 0.013 + ax * 0.0014), -14, 14);
       eP = clampv(vz * 3, -8, 8) + clampv(vy * 0.005, -3, 3);
@@ -1023,7 +1058,9 @@ function createEngine() {
     let scale = (1 + (st.scale - 1) * seqK) * (1 + (rm ? 0.005 : 0.025) * hover * (HM.open ? 0.4 : 1)) * eScale;
     const yPx = idleY + st.lift * seqK;
     let pitch = idlePitch + st.pitch * seqK + eP + lPitch + ptrS.y * 0.6 * hover * amp, roll = idleRoll + attRoll + swR + eR + lRoll - ptrS.x * 0.6 * hover * amp - st.offX * 0.12;
-    let rpm = st.rpm * (1 + 0.05 * hover), offX = st.offX + swX + eX + lX, offY = st.offY + eY + lY, yaw = st.yaw + eYaw + lYaw, z = st.z + eZ, shadowK = eShadow;
+    stepBump(now, dt);                                                        // 탐색 경로 열고 닫기 반응(요청 AA8)
+    roll += clampv(-bump.v * 0.018, -18, 18);
+    let rpm = st.rpm * (1 + 0.05 * hover), offX = st.offX + swX + eX + lX + bump.x, offY = st.offY + eY + lY, yaw = st.yaw + eYaw + lYaw + clampv(bump.v * 0.012, -12, 12), z = st.z + eZ, shadowK = eShadow;
     AIR.setFocus(focusK, focusX, focusS);
     const three = HM.three;
     if (three && (three.flying || (HM.canvas && HM.canvas.isConnected))) {

@@ -9,9 +9,11 @@ import streamlit as st
 
 from analytics import postings as P
 from analytics.common import split_tags
+from analytics.learning import skill_label, skill_names
 from components import tables
 from components.badges import badge, defense_badge, draft_badge
 from components.icon_button import icon_button
+from components.note import note
 from core import routing, state
 from core.data_loader import load_table
 from core.datasets import company_frame, job_frame, posting_frame
@@ -60,10 +62,11 @@ def _job(job_id: str) -> None:
     row = job_frame().set_index("job_id").loc[job_id]
     _head(row.job_title_ko, f"{row.major_category} · {row.middle_category}", badge(row.evidence_type, "neutral"))
     _section("핵심 업무", _p(row.core_duties))
-    st.html('<p class="dlg-sec__label">필요 기술 · 누르면 준비 역량에서 관련 교육을 찾습니다</p>')
+    st.html('<p class="dlg-sec__label">필요 기술 · 누르면 준비 역량에서 배우는 이유와 학습 자료를 봅니다</p>')   # 요청 AG2
+    names = skill_names(load_table("skill_resources"))
     with st.container(horizontal=True, key=f"dlg-job-skills-{job_id}"):
         for s in row.skills:
-            if st.button(s, key=f"dlg:job:{job_id}:skill:{s}", type="secondary"):
+            if st.button(skill_label(s, names), key=f"dlg:job:{job_id}:skill:{s}", type="secondary"):
                 _go("learning", handoff={"job_id": job_id, "skill": s})
     _section("우대 자격(원문)", _p(row.preferred_qualifications))
     _section("근무처 유형", _p(" · ".join(row.workplaces)))
@@ -126,7 +129,7 @@ def _company(company_id: str) -> None:
         st.caption(f"드론정보포털 기준일 {row.reference_date} · 출처 확인일 {row.source_checked_date} · 주소·근무지 정보는 "
                    "결측이 많아 표시하지 않습니다.")
     if not (row.has_dart or has_other):
-        st.info("현재 보유 자료에서 제공할 수 있는 상세 정보가 없습니다.")
+        note("현재 보유 자료에서 제공할 수 있는 상세 정보가 없습니다.", box=True)
     ledger = load_table("defense_evidence").query("company_id == @company_id")
     if len(ledger):
         st.html('<p class="dlg-sec__label">국방·연구·납품 근거 · 서로 다른 근거를 합산하지 않습니다</p>')

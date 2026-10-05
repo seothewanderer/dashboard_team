@@ -35,7 +35,7 @@ const PAGES = [  // key, 메뉴 제목 (core/routing.py PAGE_SPECS)
 const RECRUIT_SUBS = { postings: "채용 현황", companies: "기업 탐색" };
 const SCRAP_KINDS = { course: "학습 내용", posting: "채용 공고", company: "관심 기업" };
 const SCRAP_LIMIT = 3;
-const STORE_KEY = "drone-career-html-v3";
+const STORE_KEY = "drone-career-html-v3";   // v3부터 같은 이름: 이전 공유본의 스크랩·목표 직무가 이어짐
 
 /* ---------------- 상태 (core/state.py DEFAULTS) ---------------- */
 const S = {
@@ -43,8 +43,8 @@ const S = {
   profile: { education: null, career_type: null, regions: [], allow_remote: true },
   plan: { goal_job_id: null },
   scrap: {},
-  ui: { highlight_defense: false, highlight_goal: false, roadmap_open: true, home_menu_open: false, motion: true,
-        nav_open: false, sidebar_open: true },
+  ui: { highlight_defense: false, roadmap_open: true, home_menu_open: false, motion: true,
+        nav_open: false, mycond_open: false, rm_open: "" },   // 사이드바는 고정(요청 AA3), rm_open = 펼친 스크랩 목록 '|02|03|'(AB4)
   route: { page: "home", sub: "postings" },
   p: {},            // 화면별 필터·페이지(세션 한정, 저장 안 함)
   handoff: null,    // 다른 화면으로 넘기는 값(도착 화면이 한 번 읽음)

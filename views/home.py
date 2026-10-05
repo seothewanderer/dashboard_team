@@ -39,8 +39,10 @@ def _entry() -> dict:
     return s["_home_entry"]
 
 
-st.html(f'<header class="home-hero"><h1 class="home-hero__title">{escape(HOME_TITLE)}</h1>'
-        f'<p class="home-hero__subtitle">{escape(HOME_SUBTITLE)}</p></header>')
+# 제목 + 설명 높이에 맞춘 큰 로고를 왼쪽에(요청 AH)
+st.html(f'<header class="home-hero"><span class="logo logo--home" aria-hidden="true"></span><div>'
+        f'<h1 class="home-hero__title">{escape(HOME_TITLE)}</h1>'
+        f'<p class="home-hero__subtitle">{escape(HOME_SUBTITLE)}</p></div></header>')
 
 # ---- M03 요약 카드 + M01·M02 드론 (첫 번째 사진 구성, 요청 P2) ----
 ov = overview({n: load_table(n) for n in ["industry_size", "jobs", "job_skills", "courses", "offerings", "postings",
@@ -77,5 +79,3 @@ st.html('<h2 class="section-title hm-faq-title">자주 묻는 질문</h2>')
 for q, a in FAQ:
     with st.expander(q):
         st.write(a)
-st.html('<p class="hm-note">각 수치는 서로 다른 수집 자료(직무 사전 · 고용24 · 채용 공고 수집 표본)이며 서로 더하지 않습니다. '
-        f'채용 공고는 {POSTINGS_AS_OF} 기준입니다.</p>')

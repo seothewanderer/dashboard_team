@@ -114,9 +114,9 @@ def area_cooccurrence(companies: pd.DataFrame, f: CompanyFilters, areas: list[st
 
 
 def sort_companies(df: pd.DataFrame, f: CompanyFilters, mode: str = "auto") -> pd.DataFrame:
-    """auto: 분야·키워드 선택 시 결과 안에서 방산 우선(직접→교차→인접→미확인) → 일치도 → 이름.
-    선택이 없거나 mode='name'이면 이름순 (research 3.2)."""
-    if mode == "name" or not (f.area or f.keyword.strip()):
+    """auto: 결과 안에서 방산 관련 우선(직접→교차→인접→미확인) → 키워드 일치도 → 이름. 분야·키워드를 고르지 않은
+    전체일 때도 같다(요청 X2, 이전 research 3.2의 '미선택이면 이름순'을 바꿈). mode='name'이면 이름순."""
+    if mode == "name":
         return df.sort_values("company_name_normalized", ignore_index=True)
     rank = df["defense_group"].map({g: i for i, g in enumerate(GROUP_ORDER)})
     tier = df["match_tier"] if "match_tier" in df else 0
@@ -126,7 +126,7 @@ def sort_companies(df: pd.DataFrame, f: CompanyFilters, mode: str = "auto") -> p
 
 
 def is_sorted_by_defense(f: CompanyFilters, mode: str) -> bool:
-    return mode != "name" and bool(f.area or f.keyword.strip())
+    return mode != "name"
 
 
 def goal_reasons(companies: pd.DataFrame, job: pd.Series, application_bridge: pd.DataFrame) -> pd.Series:

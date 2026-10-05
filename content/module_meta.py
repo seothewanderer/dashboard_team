@@ -6,7 +6,6 @@ PAGE_DEFAULT = {
     "home": dict(title="이용 안내", context_lines=[
         "드론을 눌러 살펴볼 화면을 고르세요.",
         "고른 직무와 스크랩한 교육·공고·기업은 오른쪽 '나의 탐색 경로'에 모입니다.",
-        "수치는 수집 자료 기준이며 현재 채용·모집 상태가 아닙니다.",
     ]),
     "industry": dict(title="지금 보는 데이터", context_lines=[
         "드론산업 실태조사 연도별 규모",
@@ -117,10 +116,3 @@ MODULE_META = {
 
 
 POSTINGS_AS_OF = "2026년 9월 18일"   # 채용 공고 기준일 = 그날 채용 중이던 공고를 모음(사용자 확인 2026-10-02: 수집 일자 확인 후 18일로 통일)
-
-
-def caption(meta_id: str, n: int | None = None) -> str:
-    """차트 하단 한 줄: 단위 · 분모 · 기준 · 출처 · 필터 적용 여부 (research 3.3)."""
-    m = MODULE_META[meta_id]
-    shown = f"표시 {n:,} · " if n is not None else ""
-    return f"{shown}단위 {m['unit']} · 분모 {m['denominator']} · 출처 {m['source']} · {m['filter_scope']}"
