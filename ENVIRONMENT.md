@@ -1,6 +1,6 @@
 # ENVIRONMENT.md — 실행 환경과 모듈 버전
 
-- 최종 갱신: 2026-09-30 (Green Deck 재디자인: streamlit-aggrid 추가)
+- 최종 갱신: 2026-10-06 (DB 연동: PyMySQL·SQLAlchemy 추가, 요청 AX)
 - 이 문서가 환경 정보의 기준이다. 패키지를 추가·변경하면 이 문서, `requirements.txt`, `requirements-lock.txt`를 함께 갱신한다.
 
 ## 1 Python과 가상환경
@@ -23,10 +23,12 @@
 | streamlit-aggrid | 1.2.1.post2 | 인터랙티브 표(AG Grid): 행 호버·정렬·필터·검색. '근거 자세히', 비교표, 방산 근거 원장 |
 | pandas | 2.3.3 | 데이터 처리. 3.0의 동작 변경(문자열 dtype 기본값 등)을 피하려 2.x로 고정 |
 | pyarrow | 25.0.1 | parquet 캐시(`data/processed`) |
+| PyMySQL | 1.2.3 | MySQL 접속 드라이버(순수 파이썬). `scripts/pull_db.py`만 사용, 앱 실행에는 필요 없음 |
+| SQLAlchemy | 2.1.3 | DB 접속 엔진·표 목록·기본키 조회, pandas `read_sql_table` (`core/db.py`) |
 | pytest | 9.1.1 | 테스트 |
 | pip | 26.2.1 | 패키지 관리자(가상환경 안) |
 
-주요 간접 의존성: numpy 2.5.3, altair 6.3.0. 전체 47개 고정 목록은 `requirements-lock.txt`(`pip freeze`).
+주요 간접 의존성: numpy 2.5.3, altair 6.3.0. 전체 49개 고정 목록은 `requirements-lock.txt`(`pip freeze`).
 
 추가 패키지 없이 쓰는 기능: Streamlit 내장 `st.components.v2`(홈 드론·숫자 카운트업 `components/effects.py`, 라이트/다크 토글·브라우저 저장 `components/browser.py`).
 
@@ -37,7 +39,9 @@ py -3.12 -m venv .venv
 .venv\Scripts\python.exe -m pip install -r requirements-lock.txt
 .venv\Scripts\python.exe scripts\place_raw_data.py     # datas.zip → data/raw, data/reference (P0)
 .venv\Scripts\python.exe scripts\draft_bridges.py      # 관계표 초안(data/bridges, 기존 파일은 건너뜀) (P2)
-.venv\Scripts\python.exe scripts\build_data.py         # raw + bridges → data/processed/*.parquet + reports/data_audit.md (P1)
+.venv\Scripts\python.exe scripts\pull_db.py            # DB(MySQL) → data/raw_db (학원 네트워크 + .streamlit/secrets.toml 필요, 4·5절)
+.venv\Scripts\python.exe scripts\build_data.py         # raw_db(기본) + bridges → data/processed/*.parquet + reports/data_audit.md (P1)
+.venv\Scripts\python.exe scripts\build_data.py --source csv   # DB 대신 원본 CSV(data/raw)로 빌드
 .venv\Scripts\python.exe -m pytest -q                   # 테스트
 $env:PYTHONPATH="."; .venv\Scripts\python.exe scripts\make_home_icon.py   # 홈 아이콘: static/img/home.gif → home_rest/home_hover.webp (Pillow, streamlit 의존성)
 .\run.ps1                                               # 앱 실행(= .venv\Scripts\streamlit.exe run app.py, 추가 인자 전달 가능)
@@ -51,6 +55,7 @@ $env:PYTHONPATH="."; .venv\Scripts\python.exe scripts\make_home_icon.py   # 홈 
 | 파일 | 내용 |
 |---|---|
 | `.streamlit/config.toml` | DESIGN.md §9.2~9.3 테마·폰트 값. streamlit 1.64 `config show`로 키 인식 확인 |
+| `.streamlit/secrets.toml` | DB 접속 정보 `[mysql]` host·port·database·user·password. **git·제출본 제외**(.gitignore). `scripts/pull_db.py`만 읽음 |
 | `pytest.ini` | 테스트 경로(`tests`)와 import 기준(`pythonpath = .`). 실행: `.venv\Scripts\python.exe -m pytest -q` |
 | `.claude\launch.json` | Claude 미리보기용 실행 설정(`run.ps1 --server.headless true --server.port 8501`/8502, html 8777). 앱 동작과 무관. 2026-10-03 Claude 루트를 main으로 바꾸며 상위 폴더에서 이리로 옮김 |
 | 참고 | 실행 중 파이썬 모듈(core/components/views)을 고치면 서버를 재시작해야 반영된다. CSS(`static/css/base.css`)는 새로고침만으로 반영 |
@@ -59,7 +64,9 @@ $env:PYTHONPATH="."; .venv\Scripts\python.exe scripts\make_home_icon.py   # 홈 
 
 ## 5 앞으로 바뀔 예정인 부분
 
-- **데이터 소스:** 지금은 CSV → parquet이지만, 대시보드 화면이 확정된 뒤 **로컬 DB에서 읽는 방식으로 바꿀 예정**(plan.md 6.1). DB 드라이버 패키지가 추가되면 이 문서에 기록한다.
+- **데이터 소스(2026-10-06 DB 연동, 요청 AX):** DB(MySQL 8.4, 프로젝트용 AWS RDS `drone_workforce_db`, 학원 네트워크에서만 접속) → `scripts/pull_db.py`가 끌어와 `data/raw_db`에 원본과 같은 경로·모양의 CSV로 저장 → `build_data.py`(기본 `--source db`) → parquet → 앱. 앱은 DB에 직접 접속하지 않아 집·배포·제출본에서도 동작한다.
+  - DB에 없는 열·표는 원본 CSV로 채우고 알린다: 열은 `data/raw_db/_pull_report.md`, 표는 빌드 출력과 `data/processed/_manifest.json`의 `csv_fallback`.
+  - CSV로 되돌리기: `build_data.py --source csv`(한 번) 또는 `core/config.py`의 `DATA_SOURCE = "csv"`(기본값).
 
 ## 6 기능 공유본(HTML)에 넣는 외부 파일
 

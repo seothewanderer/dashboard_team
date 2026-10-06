@@ -8,7 +8,7 @@ import json
 import pandas as pd
 import streamlit as st
 
-from core.config import BRIDGES, CONTENT, PROCESSED, RAW
+from core.config import BRIDGES, CONTENT, PROCESSED, RAW, RAW_DB, ROOT
 
 MANIFEST = PROCESSED / "_manifest.json"
 BUILD_COMMAND = r".venv\Scripts\python.exe scripts\build_data.py"
@@ -28,8 +28,12 @@ def build_status() -> str | None:
     """빌드 산출물이 없거나 원본보다 오래되면 안내 문구, 정상이면 None."""
     if not MANIFEST.exists():
         return f"데이터 빌드 필요: {BUILD_COMMAND}"
+    # 원본이 더 새로운지는 개발 PC(.venv가 있는 곳)에서만 본다. 배포 서버는 저장소를 받을 때 파일 시각이 새로 찍혀
+    # 데이터가 그대로여도 '원본이 바뀌었습니다'가 떴다(배포 확인 중 발견)
+    if not (ROOT / ".venv").exists():
+        return None
     built = MANIFEST.stat().st_mtime
-    sources = [p for folder in (RAW, BRIDGES, CONTENT) if folder.exists() for p in folder.rglob("*.csv")]
+    sources = [p for folder in (RAW, RAW_DB, BRIDGES, CONTENT) if folder.exists() for p in folder.rglob("*.csv")]
     if any(p.stat().st_mtime > built for p in sources):
         return f"원본이 빌드 이후 바뀌었습니다. 다시 빌드: {BUILD_COMMAND}"
     return None

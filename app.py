@@ -3,7 +3,7 @@ import time
 
 import streamlit as st
 
-from components import dialogs, shell
+from components import dialogs, page_loader, shell
 from components.browser import bridge, fit_zoom
 from core import data_loader, export_mode, persistence, routing, state, theme
 
@@ -13,6 +13,8 @@ if not export_mode.on():   # 모니터 크기 맞춤(요청 AE3): 맨 앞에서 
     with st.sidebar:
         fit_zoom(theme.ZOOM["base"], theme.ZOOM["max"])
 state.init()
+if not export_mode.on():   # 페이지 이동 로딩 화면(요청 AW): 본문이 비는 사이 로고 + "○○로 이동 중"
+    page_loader.render(st.session_state["ui"]["motion"])
 routing.sync_sub()  # 사이드바와 04 탭이 같은 실행에서 같은 하위 페이지를 보도록 가장 먼저
 
 pages = routing.pages()

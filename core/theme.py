@@ -45,6 +45,7 @@ BASE = {
     "--note-icon-size": "14px",   # 파란 안내 느낌표 크기(요청 AE1, Proposed)
     "--toc-no": "24px",           # 소개 카드 목차 번호 원(요청 AB5, Proposed)
     "--logo-topbar": "28px", "--logo-sidebar": "26px", "--logo-home": "88px", "--logo-footer": "64px",   # 로고 크기: 상단 줄·사이드바·홈 제목+설명·푸터(요청 AH, Proposed)
+    "--loader-bars": "96px", "--loader-drone-w": "240px", "--loader-float": "1600ms",   # 페이지 이동 로딩: 막대 높이·드론 폭·떠다니기 한 번(요청 AW, Proposed)
     "--roadmap-no-w": "20px", "--rm-drone": "16px", "--rm-path-w": "2px",   # 로드맵 번호 칸·드론 아이콘·지나온 선 굵기(요청 AB3, Proposed)     # 카드 펼치기 'N개씩 보기' 목록 폭(요청 AB7, Proposed)     # 탐색 경로 '내 조건' 설명·항목 글꼴 배율(요청 AA5, Proposed)
     "--nav-item-h": "44px",       # 사이드바 메뉴 항목 높이(홈~04 동일, 요청 2026-09-30)
     "--nav-no-w": "36px",         # 번호·홈 아이콘 칸 폭(이름 시작 위치를 맞춤, 요청 D2)
@@ -189,7 +190,8 @@ ZOOM = {"base": 2020, "max": 1.5}   # 2560 화면 = 1.27배(브라우저 80%~100
 
 MOTION = {"chart_enter_ms": 500, "chart_update_ms": 300, "easing": "cubicOut", "countup_ms": 900,
           "line_draw_ms": 1400,   # 선 그래프 왼쪽→오른쪽 그리기(요청 I2)
-          "net_grow_ms": 3500}    # 02 3D 네트워크 첫 등장: 핵에서 가지가 자라남(Proposed)
+          "net_grow_ms": 3500,    # 02 3D 네트워크 첫 등장: 핵에서 가지가 자라남(Proposed)
+          "loader_min_ms": 300}   # 페이지 이동 로딩 화면이 켜지면 최소로 보이는 시간(요청 AW, Proposed)
 
 BASE_CSS = ROOT / "static" / "css" / "base.css"
 
@@ -235,7 +237,9 @@ def img_uri(name: str) -> str:
 def inject_css() -> None:
     """토큰(:root 변수)과 static/css/base.css 를 매 실행 첫머리에 주입."""
     t = tokens()
-    logo_var = {"--logo-img": logo.uri(t["--text"], t["--primary"])}   # 서비스 로고(요청 AH): 테마 글자색 + 초록
+    logo_var = {"--logo-img": logo.uri(t["--text"], t["--primary"]),   # 서비스 로고(요청 AH): 테마 글자색 + 초록
+                # 페이지 이동 로딩 화면(요청 AW): 로고 막대 + 홈 3D 드론 정지 그림(테마별 조명, make: 홈 모델을 같은 조명·각도로 렌더)
+                "--loader-bars-img": logo.bars_uri(t["--text"], t["--primary"]), "--loader-drone-img": img_uri(f"loading_drone_{mode()}")}
     root = ";".join(f"{k}:{v}" for k, v in (t | _image_vars() | logo_var).items())
     unscaled = ";".join(f"{k}:{v}" for k, v in UNSCALED.items())
     st.html(f"<style>:root{{{root}}}\n{','.join(UNSCALED_SCOPES)}{{{unscaled}}}\n"

@@ -50,3 +50,13 @@ def test_employment_types_is_list(tables):
 def test_no_korean_column_names(tables):
     # 로컬 DB 전환 대비: 앱이 읽는 org는 영문 컬럼만 (plan 6.1)
     assert not [c for c in tables["org"].columns if any("가" <= ch <= "힣" for ch in c)]
+
+
+def test_build_source_db_falls_back_to_csv(tmp_path, monkeypatch):
+    # DB 연동(요청 AX): raw_db에 없는 원본은 data/raw의 CSV로 읽고 목록에 남긴다. csv 모드는 raw만 읽는다
+    import scripts.build_data as bd
+    monkeypatch.setattr(bd, "RAW_DB", tmp_path)
+    rel = "industry/Employment_Outlook.csv"
+    db_builder, csv_builder = bd.Builder("db"), bd.Builder("csv")
+    assert db_builder.read(rel).equals(csv_builder.read(rel))
+    assert db_builder.csv_fallback == {rel} and csv_builder.csv_fallback == set()

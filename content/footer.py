@@ -2,7 +2,7 @@
 출처·기준일은 그래프 해설(content.chart_explain)·module_meta와 같은 값. 버전·업데이트일은 plan.md 버전 기록과 맞춘다."""
 from content.module_meta import POSTINGS_AS_OF
 
-VERSION, UPDATED = "v0.39", "2026-10-05"
+VERSION, UPDATED = "v0.40", "2026-10-05"
 
 # 화면 → 다음 화면(키, 하위, 이름, 한 줄 설명). 탐색 순서 01 → 02 → 03 → 04 채용 현황 → 04 기업 탐색. 마지막 화면은 없음
 NEXT_STEP = {

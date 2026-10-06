@@ -602,3 +602,5 @@ div[role="dialog"] { background: var(--surface-3) !important; border-radius: var
 .st-key-roadmap-mycond-top { flex-wrap: nowrap; gap: var(--space-xs); }
 [class*="st-key-roadmap-actions-"] { width: 100%; flex-wrap: nowrap; align-items: center; }
 .st-key-roadmap-mycond [data-testid="stMultiSelect"] :is(input, [data-testid="stMultiSelectTagsContainer"] *) { font-size: var(--native-text); }
+/* 페이지 이동 로딩 화면 부품 자리(요청 AW): 보이는 것은 body에 붙인 덮개뿐 */
+.st-key-page-loader { display: none; }

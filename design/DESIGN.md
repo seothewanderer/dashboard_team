@@ -372,6 +372,18 @@ So when red is used for defense:
 - **Roadmap steps (F9):** a step holding items uses the sidebar active style (`--accent-soft` plus a 3px `--primary` inset bar).
 - **Side-by-side chart cards:** fill the row height, so neighbouring cards line up.
 
+### 12.26 AW (2026-10-05) — page-switch loading screen
+
+- **Why:** on a page switch Streamlit empties the body and redraws it. On the deployed app this takes about 0.3s, and during it only the footer showed.
+- **When:** the app is running and the body has no page title (`h1`). It hides when the run ends, after at least `MOTION.loader_min_ms` (300ms). Filter reruns on the same page keep the title, so it never shows for them. The footer is hidden while it shows (`html.dd-nav`).
+- **Where:** covers only the body column. The sidebar and 나의 탐색 경로 stay visible. Background `--bg`.
+- **Look:**
+  - Large: logo bars (`logo.bars_uri`, ink + `--primary`), height `--loader-bars` 96px.
+  - Above them: a still render of the home 3D drone (`static/img/loading_drone_{dark|light}.webp`). It uses the same `buildFoldableDrone` model, lights and 3/4 angle as the home scene, rendered per theme. Width `--loader-drone-w` 240px.
+  - Small: caption "○○로 이동 중" (`--font-caption`, `--text-2`). The particle 로/으로 follows the last syllable. The destination comes from the clicked link, then from the new address; until it is known only "이동 중" shows.
+- **Motion:** the drone floats up by `--space-sm`, `--loader-float` 1600ms, alternate. Off when app motion is off or the OS asks for reduced motion.
+- New values are Proposed (not in source): `--loader-bars`, `--loader-drone-w`, `--loader-float`, `MOTION.loader_min_ms`.
+
 ### 12.25 AU (2026-10-05) — card folds stay open when paging
 
 - **Problem:** after a card fold was opened by code (a chip or chart pick), the content above it sometimes changed (for example the 01 heatmap appears). Streamlit then remounted the fold, and the browser kept its old "closed" value. The next click inside the fold (이전/다음, N개씩 보기, …) sent that value and the fold closed.

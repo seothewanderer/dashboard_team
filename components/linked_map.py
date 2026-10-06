@@ -24,7 +24,7 @@ _JS = """
 let lib = null;
 function loadECharts() {
   if (window.echarts) return Promise.resolve(window.echarts);
-  if (!lib) lib = fetch('/app/static/vendor/echarts.min.js').then((r) => r.text()).then((src) => {
+  if (!lib) lib = fetch('app/static/vendor/echarts.min.js').then((r) => r.text()).then((src) => {
     const s = document.createElement('script'); s.textContent = src; document.head.appendChild(s); return window.echarts;
   });
   return lib;

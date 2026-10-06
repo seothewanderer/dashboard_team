@@ -5,8 +5,12 @@
 3. 계약 검사(plan 6.5) 실패 시 중단
 4. parquet + quality_audit + reports/data_audit.md 저장
 
-실행: .venv\\Scripts\\python.exe scripts\\build_data.py
+실행: .venv\\Scripts\\python.exe scripts\\build_data.py [--source db|csv]
+  db  = data/raw_db (scripts/pull_db.py가 DB에서 끌어와 저장한 원본, 기본값 core.config.DATA_SOURCE)
+        raw_db에 없는 파일은 원본 CSV(data/raw)로 읽고 끝에 목록을 알려 준다
+  csv = data/raw (원본 CSV, DB 연동 전과 같음)
 """
+import argparse
 import json
 import sys
 from datetime import datetime
@@ -16,7 +20,7 @@ import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from core import quality  # noqa: E402
-from core.config import BRIDGES, CONTENT, CSV_ENCODING, PROCESSED, RAW, REPORTS  # noqa: E402
+from core.config import BRIDGES, CONTENT, CSV_ENCODING, DATA_SOURCE, PROCESSED, RAW, RAW_DB, REPORTS  # noqa: E402
 
 REVIEW_STATUSES = {"draft", "reviewed", "rejected"}
 
@@ -96,11 +100,17 @@ PASS_THROUGH = {
 
 
 class Builder:
-    def __init__(self):
+    def __init__(self, source: str = "csv"):
         self.audits: list[pd.DataFrame] = []
+        self.source = source
+        self.csv_fallback: set[str] = set()   # source=db인데 raw_db에 없어 원본 CSV로 읽은 파일
 
     def read(self, rel: str) -> pd.DataFrame:
-        return pd.read_csv(RAW / rel, encoding=CSV_ENCODING, low_memory=False)
+        path = RAW_DB / rel if self.source == "db" else RAW / rel
+        if not path.exists() and self.source == "db":
+            self.csv_fallback.add(rel)
+            path = RAW / rel
+        return pd.read_csv(path, encoding=CSV_ENCODING, low_memory=False)
 
     def clean(self, rel: str, *, also_drop: set[str] = frozenset()) -> pd.DataFrame:
         """감사 기록 후 제외 컬럼 제거. also_drop: union 상대 파일에서 제외된 컬럼(양쪽 통일)."""
@@ -250,7 +260,9 @@ def write_audit_report(audit: pd.DataFrame, path: Path) -> None:
 
 
 def main() -> None:
-    builder = Builder()
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--source", choices=["db", "csv"], default=DATA_SOURCE)
+    builder = Builder(ap.parse_args().source)
     tables = builder.build()
     fails = check_contracts(tables)
     if fails:
@@ -264,10 +276,12 @@ def main() -> None:
         df.to_parquet(PROCESSED / f"{name}.parquet", index=False)
     write_audit_report(audit, REPORTS / "data_audit.md")
     (PROCESSED / MANIFEST).write_text(json.dumps(
-        {"built_at": datetime.now().isoformat(timespec="seconds"),
-         "tables": {n: len(df) for n, df in tables.items()}}, ensure_ascii=False, indent=2), encoding="utf-8")
+        {"built_at": datetime.now().isoformat(timespec="seconds"), "source": builder.source,
+         "csv_fallback": sorted(builder.csv_fallback), "tables": {n: len(df) for n, df in tables.items()}}, ensure_ascii=False, indent=2), encoding="utf-8")
     excluded = audit.status.str.startswith("exclude").sum()
-    print(f"테이블 {len(tables)}개 저장, 계약 검사 통과, 제외 컬럼 {excluded}개 / 주의 {(audit.status == 'caution').sum()}개")
+    print(f"원본: {builder.source} · 테이블 {len(tables)}개 저장, 계약 검사 통과, 제외 컬럼 {excluded}개 / 주의 {(audit.status == 'caution').sum()}개")
+    if builder.csv_fallback:
+        print(f"DB 저장본에 없어 원본 CSV로 읽은 파일 {len(builder.csv_fallback)}개: " + ", ".join(sorted(builder.csv_fallback)))
 
 
 if __name__ == "__main__":

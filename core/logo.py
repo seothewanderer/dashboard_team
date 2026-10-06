@@ -14,5 +14,14 @@ def svg(ink: str, green: str) -> str:
             '</svg>')
 
 
+def bars_uri(ink: str, green: str) -> str:
+    """막대 3개만(드론 없이, 막대에 맞춰 자름) — 페이지 이동 로딩 화면에서 드론 자리는 홈 3D 드론 그림(요청 AW)."""
+    s = ('<svg xmlns="http://www.w3.org/2000/svg" viewBox="5.5 14 34 30">'
+         f'<rect x="5.5" y="32" width="9" height="12" rx="2" fill="{ink}"/>'
+         f'<rect x="17.5" y="23" width="9" height="21" rx="2" fill="{ink}"/>'
+         f'<rect x="29.5" y="14" width="10" height="30" rx="2" fill="{green}"/></svg>')
+    return f"url(data:image/svg+xml;base64,{base64.b64encode(s.encode()).decode()})"
+
+
 def uri(ink: str, green: str) -> str:
     return f"url(data:image/svg+xml;base64,{base64.b64encode(svg(ink, green).encode()).decode()})"

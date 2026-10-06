@@ -27,7 +27,7 @@ def home_hero(entries: list[dict], kpis: list[dict], *, entry: dict | None, key:
     entries = [e | {"icon": theme.img_uri(e["icon"])} for e in entries]   # 패널 아이콘 → data URI(요청 Q2)
     kpis = [k | {"icon": {s: theme.img_uri(f"kpi_{k['icon']}_{s}") for s in ("rest", "hover")}} for k in kpis]   # 요청 R2
     return _comp(data={"entries": entries, "kpis": kpis, "open": ui["home_menu_open"], "motion": motion, "entry": entry,
-                       "vendor": "/app/static/vendor/three/", "countup_ms": theme.MOTION["countup_ms"]},
+                       "vendor": "app/static/vendor/three/", "countup_ms": theme.MOTION["countup_ms"]},
                  key=key, default={"open": ui["home_menu_open"], "motion": ui["motion"]},
                  on_open_change=lambda: None, on_motion_change=lambda: None, on_go_change=lambda: None,
                  on_kpi_change=lambda: None)

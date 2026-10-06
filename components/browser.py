@@ -30,7 +30,12 @@ _CSS = """
 _JS = """
 export default function(component) {
   const { data, parentElement, setStateValue } = component;
-  const PATHS = data.paths;
+  // 배포(Streamlit Community Cloud)에서는 앱 주소 앞에 경로가 붙는다(예: /~/+/industry). Streamlit은 지금 주소로
+  // 테마를 저장하므로 같은 앞부분을 붙여야 한다 — 안 붙이면 '저장된 테마 없음 → 저장 → 새로고침'이 끝없이 반복됐다
+  const here = window.location.pathname;
+  const page = data.paths.find((p) => p !== '/' && here.endsWith(p));
+  const base = page ? here.slice(0, here.length - page.length) : here.replace(/\/$/, '');
+  const PATHS = [...new Set([here, ...data.paths.map((p) => base + p)])];
   const themeKey = (p) => `stActiveTheme-${p}-v2`;
   // 검색란 펼치기 단추(▾/▴)를 열린 상태에서 다시 누르면 닫기(요청 AB1). Streamlit 1.64 콤보박스는 닫혔다가 곧바로 다시 열려
   // 계속 펼쳐지기만 했다 → 그 누름을 가로채 Esc로 닫는다. 페이지 전체에 한 번만 건다
@@ -51,9 +56,13 @@ export default function(component) {
   try { localStorage.setItem('__probe', '1'); localStorage.removeItem('__probe'); } catch (e) { storageOk = false; }
 
   // 첫 방문: 사용자가 고른 테마가 없으면('System' 포함) 다크로 (dark-first)
-  const saved = storageOk ? localStorage.getItem(themeKey(window.location.pathname)) : null;
-  if (storageOk && (!saved || saved === JSON.stringify('System'))) {
+  // 새로고침은 탭마다 한 번만(혹시 저장이 반영되지 않는 환경이어도 깜빡임이 반복되지 않게)
+  const saved = storageOk ? localStorage.getItem(themeKey(here)) : null;
+  let reloaded = false;
+  try { reloaded = sessionStorage.getItem('drone-dark-first') === '1'; } catch (e) {}
+  if (storageOk && !reloaded && (!saved || saved === JSON.stringify('System'))) {
     PATHS.forEach((p) => localStorage.setItem(themeKey(p), JSON.stringify('Dark')));
+    try { sessionStorage.setItem('drone-dark-first', '1'); } catch (e) {}
     window.location.reload();
     return;
   }
